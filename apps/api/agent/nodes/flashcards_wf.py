@@ -3,6 +3,52 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import SystemMessage
 from langfuse import observe
 import uuid
+import json
+import os
+import genanki
+import random
+import logging
+
+logger = logging.getLogger(__name__)
+
+# Ensure download directory exists
+DOWNLOADS_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "data", "downloads")
+os.makedirs(DOWNLOADS_DIR, exist_ok=True)
+
+# Define Anki Model
+anki_model = genanki.Model(
+  1607392319,
+  'LearnForge Model',
+  fields=[
+    {'name': 'Question'},
+    {'name': 'Answer'},
+  ],
+  templates=[
+    {
+      'name': 'Card 1',
+      'qfmt': '{{Question}}',
+      'afmt': '{{FrontSide}}<hr id="answer">{{Answer}}',
+    },
+  ])
+
+def create_apkg(title: str, cards: list) -> str:
+    """Generates an Anki package and returns the filename."""
+    deck_id = random.randrange(1 << 30, 1 << 31)
+    deck = genanki.Deck(deck_id, title)
+    
+    for c in cards:
+        note = genanki.Note(
+            model=anki_model,
+            fields=[c.get("front", ""), c.get("back", "")]
+        )
+        deck.add_note(note)
+        
+    pkg = genanki.Package(deck)
+    file_id = str(uuid.uuid4())
+    filename = f"{file_id}.apkg"
+    filepath = os.path.join(DOWNLOADS_DIR, filename)
+    pkg.write_to_file(filepath)
+    return filename
 
 @observe()
 async def flashcards_wf_node(state: AppState):
@@ -31,10 +77,25 @@ Schema:
     
     artifacts = state.get("artifacts", [])
     if "<artifact type=\"flashcards\">" in response.content:
+        # Extract the JSON to build the APKG
+        raw = response.content.split('<artifact type="flashcards">')[1].split('</artifact>')[0]
+        try:
+            data = json.loads(raw)
+            filename = create_apkg(data.get("title", "LearnForge Deck"), data.get("cards", []))
+            
+            # Inject download link into the artifact payload
+            data["download_url"] = f"/api/download/anki/{filename}"
+            
+            new_content = f'<artifact type="flashcards">\n{json.dumps(data)}\n</artifact>'
+            response.content = response.content.replace(raw, f"\n{json.dumps(data)}\n")
+        except Exception as e:
+            logger.warning(f"Failed to generate Anki deck: {e}")
+            new_content = response.content
+
         artifacts.append({
             "id": str(uuid.uuid4()),
             "type": "flashcards",
-            "content": response.content,
+            "content": new_content,
             "created_at": "now"
         })
         

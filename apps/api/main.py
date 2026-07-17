@@ -3,9 +3,9 @@ import json
 import logging
 import os
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, FileResponse
 from pydantic import BaseModel
 from typing import List
 from langchain_core.messages import HumanMessage
@@ -62,6 +62,14 @@ app.include_router(curriculum.router)
 @app.get("/api/health")
 def health_check():
     return {"status": "ok", "checkpointer": "sqlite" if _checkpointer else "none"}
+
+
+@app.get("/api/download/anki/{filename}")
+def download_anki(filename: str):
+    filepath = os.path.join(os.path.dirname(__file__), "data", "downloads", filename)
+    if not os.path.exists(filepath):
+        raise HTTPException(status_code=404, detail="File not found")
+    return FileResponse(filepath, media_type="application/apkg", filename=filename)
 
 
 @app.get("/api/test/stream")

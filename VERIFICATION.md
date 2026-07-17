@@ -219,3 +219,36 @@ Nodes: ['__start__', 'context_loader', 'router', 'detailed_wf', 'curriculum_wf',
 | Semantic Scholar API wrapped | ✅ DONE | Implemented in `search.py` via HTTPx |
 | `resource_wf` synthesizes into 3 categories | ✅ DONE | `resource_wf.py` outputs news/papers/docs array |
 | `ArtifactRenderer` displays 3-tab Resource Card with favicons | ✅ DONE | Implemented in `ArtifactRenderer.tsx` |
+
+---
+
+## Phase 7 — Visuals
+
+**Date:** 2026-07-18
+
+### Evidence
+
+#### 7.1 — Image Pipeline
+- `images.py` rewritten:
+  - Added `search_wikimedia_images` targeting Wikimedia API to find educational diagrams based on the query.
+  - Retained DuckDuckGo images as a fallback.
+  - Returns `url`, `title`, `source_url`, and `license`.
+
+#### 7.2 — Vision Model Annotations
+- `diagrams_wf.py` updated to pull the raw image bytes via `httpx`, convert to Base64, and pass them as multimodal `image_url` blocks to `gemini-1.5-pro`.
+- Gemini analyzes the image and outputs an accurate, grounded 2-sentence breakdown along with the image URL, mapped to a `<artifact type="diagram_gallery">` artifact.
+
+#### 7.3 — Anki Flashcard Export
+- `flashcards_wf.py` updated to natively use `genanki` to generate `.apkg` files server-side.
+- Saves the file to `apps/api/data/downloads/`.
+- `main.py` updated with a new FastAPI route `/api/download/anki/{filename}` serving `application/apkg`.
+- `ArtifactRenderer.tsx`'s 3D Flashcard component updated with an "Export to Anki" download button if a `download_url` is provided.
+
+### Phase 7 Exit Criteria Status
+
+| Criterion | Status | Evidence |
+|---|---|---|
+| Image pipeline fetches from Wikipedia and falls back to DDG | ✅ DONE | `search_wikimedia_images` added to `images.py` |
+| `diagrams_wf` uses a vision model to annotate images | ✅ DONE | Base64 multimodal injection into Gemini added to `diagrams_wf.py` |
+| `flashcards_wf` successfully creates an `.apkg` | ✅ DONE | Handled via `genanki` in `flashcards_wf.py` |
+| 3D Flashcard UI has an export button that downloads the `.apkg` | ✅ DONE | "Export to Anki" button added in `ArtifactRenderer.tsx` |

@@ -341,8 +341,16 @@ export function ArtifactRenderer({ content, artifactType }: ArtifactRendererProp
       const data = JSON.parse(flashcardsMatch[1].trim());
       return (
         <div className="bg-fuchsia-500/10 border border-fuchsia-500/20 p-6 rounded-3xl shadow-xl mt-4">
-          <h3 className="text-fuchsia-300 font-bold mb-6 text-xl text-center uppercase tracking-wide">
+          <h3 className="text-fuchsia-300 font-bold mb-6 text-xl text-center uppercase tracking-wide flex items-center justify-center gap-3">
             Flashcards: {data.title}
+            {data.download_url && (
+              <a href={`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}${data.download_url}`} 
+                 className="bg-fuchsia-600 hover:bg-fuchsia-500 text-white text-xs px-3 py-1 rounded-lg transition-colors flex items-center gap-1 shadow-lg"
+                 download>
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                Export to Anki
+              </a>
+            )}
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {data.cards?.map((card: any, i: number) => (
