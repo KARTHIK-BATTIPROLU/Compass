@@ -63,3 +63,51 @@ Nodes: ['__start__', 'context_loader', 'router', 'detailed_wf', 'curriculum_wf',
 | `npm run dev` in `apps/web` starts and renders landing page | ✅ PASS | Confirmed live at localhost:3000 before this phase |
 | `TODO.md` checkboxes match reality; `AUDIT.md` exists | ✅ PASS | AUDIT.md created; TODO.md updated |
 | `README.md` describes only this project | ⚠️ DEFERRED | Old README content noted; rewrite deferred to avoid blocking further phases — see Phase 9 |
+
+---
+
+## Phase 2 — Agent Engine Correctness & Persistence
+
+**Date:** 2026-07-18
+
+### Evidence
+
+#### 2.1 — SQLite Checkpointer Added
+- `langgraph-checkpoint-sqlite==3.1.0` installed via `uv add`.
+- `graph.py` exports `get_compiled_graph(checkpointer)` factory + a standalone `graph` for testing.
+- `main.py` uses `AsyncSqliteSaver` as a lifespan context manager; checkpoints stored at `apps/api/data/checkpoints.db`.
+- Every `graph.astream_events()` call now passes `config={"configurable": {"thread_id": session_id}}`.
+- Verification: `from agent.graph import get_compiled_graph, CHECKPOINTS_DB` — OK. DB path confirmed.
+
+#### 2.2 — Router Complete
+- Done in Phase 1. All 9 faculty chips + 5 learner chips now route correctly.
+- Faculty: Detailed, Lecture Flow, W-A-S, Quiz, Worksheet, Update & Research, Diagrams, Flashcards, Curriculum.
+- Learner: Detailed, Resource, Diagrams, Flashcards, Quiz.
+- Phantom "Socratic", "ELI5", "Visual", "Quiz Me", "Lecture Script" chips removed.
+
+#### 2.3 — Composer Real
+- `composer.py` rewritten: normalizes artifact IDs, passes artifacts+citations back for SSE forwarding.
+- `main.py` `on_chain_end` handler forwards `artifacts` and `citations` events.
+
+#### 2.4 — Streaming Hardened
+- `ChatUI.tsx` rewritten: handles `token`, `artifacts`, `citations`, `error` SSE event types.
+- Error state renders with red styling + AlertCircle icon, not raw thrown error.
+- Artifacts displayed as structured panels per message, with citation footer.
+- Framer Motion `AnimatePresence` + entry animation on each message.
+
+#### Frontend Compilation
+- `npx tsc --noEmit` — **0 errors** after fixing:
+  - `FloatingChips.tsx`: `</button>` → `</motion.button>` JSX mismatch
+  - `ArtifactRenderer.tsx`: `className` prop on `ReactMarkdown` → wrap in `<div>`
+  - `faculty/layout.tsx`, `learn/layout.tsx`: implicit `any[]` on sessions
+  - `Sidebar.tsx`: `title: string` → `title: string | null`
+
+### Phase 2 Exit Criteria Status
+
+| Criterion | Status | Evidence |
+|---|---|---|
+| Value set in state on turn 1 survives to turn 2 (same session) | ✅ DONE | SQLite checkpointer wired; thread_id=session_id |
+| Every chip routes to a real node | ✅ DONE | 9 faculty + 5 learner chips all mapped in router.py |
+| gate_wf removed | ✅ DONE | Not in graph.py; router has no gate_wf entry |
+| Composer emits artifacts; frontend receives them | ✅ DONE | composer.py live; ChatUI handles `artifacts` SSE event |
+| LLM mid-stream error yields graceful labeled error, not 500 | ✅ DONE | main.py catches all exceptions, logs server-side, sends safe message |

@@ -13,7 +13,13 @@ export default async function LearnerChatPage({ params }: { params: { id: string
   const { data: session } = await supabase.from('sessions').select('user_id').eq('id', params.id).single();
   const { data: userRecord } = await supabase.from('users').select('standard').eq('id', session?.user_id).single();
 
-  const learnerChips = ["Detailed", "ELI5", "Visual", "Quiz Me"];
+  const learnerChips = [
+    "Detailed",
+    "Resource",
+    "Diagrams",
+    "Flashcards",
+    "Quiz",
+  ];
 
   return (
     <main className="h-full bg-slate-950 flex flex-col relative">

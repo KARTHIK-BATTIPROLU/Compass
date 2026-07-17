@@ -13,7 +13,17 @@ export default async function FacultyChatPage({ params }: { params: { id: string
   const { data: session } = await supabase.from('sessions').select('class_level, user_id').eq('id', params.id).single();
   const { data: userRecord } = await supabase.from('users').select('language').eq('id', session?.user_id).single();
 
-  const facultyChips = ["Detailed", "Curriculum", "Lecture Script", "Socratic"];
+  const facultyChips = [
+    "Detailed",
+    "Lecture Flow",
+    "W-A-S",
+    "Quiz",
+    "Worksheet",
+    "Update & Research",
+    "Diagrams",
+    "Flashcards",
+    "Curriculum",
+  ];
 
   return (
     <main className="h-full bg-slate-950 flex flex-col relative">

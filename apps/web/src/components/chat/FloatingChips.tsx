@@ -26,7 +26,7 @@ export function FloatingChips({ chips, activeChips, onToggle }: FloatingChipsPro
             }`}
           >
             <span className="relative z-10">{chip}</span>
-          </button>
+          </motion.button>
         )
       })}
     </div>

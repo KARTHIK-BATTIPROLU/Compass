@@ -1,3 +1,4 @@
+import os
 from langgraph.graph import StateGraph, END
 from agent.state import AppState
 from agent.nodes.context_loader import context_loader_node
@@ -15,8 +16,7 @@ from agent.nodes.flashcards_wf import flashcards_wf_node
 from agent.nodes.memory_writer import memory_writer_node
 from agent.nodes.composer import composer_node
 
-# NOTE: gate_wf is removed — it is not in the spec.
-# See DECISIONS.md for rationale.
+# NOTE: gate_wf is removed — not in spec. See DECISIONS.md DEC-001.
 
 def route_condition(state: AppState):
     return state.get("route", "detailed_wf")
@@ -68,6 +68,20 @@ for node in [
 workflow.add_edge("memory_writer", "composer")
 workflow.add_edge("composer", END)
 
-# Compile without checkpointer for now.
-# TODO (Phase 2): add PostgresSaver checkpointer for durable multi-turn state.
+# ── Checkpointer (SQLite for local dev; upgrade to Postgres in production) ──
+# This makes state (lecture_flow, topics_touched, etc.) persist across turns
+# within the same session_id / thread_id.
+from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
+
+CHECKPOINTS_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
+os.makedirs(CHECKPOINTS_DIR, exist_ok=True)
+CHECKPOINTS_DB = os.path.join(CHECKPOINTS_DIR, "checkpoints.db")
+
+# Graph is compiled lazily at first use so the checkpointer context manager
+# can be opened per-request in main.py.
+# For simplicity, we expose a factory function used by main.py.
+def get_compiled_graph(checkpointer):
+    return workflow.compile(checkpointer=checkpointer)
+
+# Also export a standalone compile for testing/import checks
 graph = workflow.compile()

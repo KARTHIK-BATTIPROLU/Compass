@@ -4,7 +4,7 @@ import Link from "next/link";
 import { PlusCircle, MessageSquare } from "lucide-react";
 
 interface SidebarProps {
-  sessions: { id: string, title: string }[];
+  sessions: { id: string, title: string | null }[];
   role: "faculty" | "learner";
 }
 
