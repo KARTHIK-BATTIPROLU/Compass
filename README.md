@@ -1,6 +1,50 @@
-# Compass — AI Education Content Platform
+# LearnForge
 
-Chat-first platform where teachers and students describe what they need, and a LangGraph agent generates quizzes, slides, notes, and diagrams with weak-spot memory, web grounding, and human-in-the-loop review.
+An open-source, dual-platform learning environment powered by a unified LangGraph agent engine.
+
+## Documentation
+- **Architecture & Source of Truth:** Read [CONTEXT.md](./CONTEXT.md)
+- **Execution Plan:** Read [TODO.md](./TODO.md)
+- **Demo Script:** Read [demo_script.md](./demo_script.md)
+
+## Quick Start (Local Development)
+
+### 1. Prerequisites
+- Docker (for Qdrant & Langfuse)
+- Node.js (for Next.js frontend)
+- Python 3.11+ / `uv` (for FastAPI backend)
+- Supabase account (or local Supabase instance)
+
+### 2. Environment Variables
+Create `.env` files in both `apps/web` and `apps/api`.
+**apps/api/.env:**
+```env
+GEMINI_API_KEY=your_gemini_key
+TAVILY_API_KEY=your_tavily_key
+SUPABASE_URL=your_supabase_url
+SUPABASE_SERVICE_KEY=your_supabase_key
+# Optional: QDRANT_URL, LANGFUSE_PUBLIC_KEY, etc.
+```
+
+### 3. Run Backend Services
+```bash
+# Start vector DB
+docker-compose up -d
+
+# Start API
+cd apps/api
+uv venv
+uv pip install -r pyproject.toml # or install manually per TODO
+uv run uvicorn main:app --reload
+```
+
+### 4. Run Frontend
+```bash
+cd apps/web
+npm install
+npm run dev
+```
+Navigate to `http://localhost:3000`.
 
 ## Stack
 

@@ -1,0 +1,1 @@
+{"name": "learnforge", "private": true, "workspaces": ["apps/*", "packages/*"]}
