@@ -1,16 +1,24 @@
 from agent.state import AppState
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import SystemMessage
-from langfuse.decorators import observe
-from supabase import create_client, Client
+from langfuse import observe
 import os
 import uuid
 import json
+import logging
 
-supabase: Client = create_client(
-    os.getenv("SUPABASE_URL", "http://localhost:8000"),
-    os.getenv("SUPABASE_SERVICE_KEY", os.getenv("SUPABASE_ANON_KEY", ""))
-)
+logger = logging.getLogger(__name__)
+
+_supabase = None
+def get_supabase():
+    global _supabase
+    if _supabase is None:
+        from supabase import create_client
+        url = os.getenv("SUPABASE_URL", "")
+        key = os.getenv("SUPABASE_SERVICE_KEY", os.getenv("SUPABASE_ANON_KEY", ""))
+        if url and key:
+            _supabase = create_client(url, key)
+    return _supabase
 
 @observe()
 async def quiz_wf_node(state: AppState):
@@ -64,7 +72,9 @@ CURRICULUM:
     if role == "faculty":
         token = str(uuid.uuid4())
         try:
-            supabase.table("quizzes").insert({
+            sb = get_supabase()
+            if sb:
+                sb.table("quizzes").insert({
                 "artifact_id": token,
                 "share_token": token,
                 "questions": quiz_data,

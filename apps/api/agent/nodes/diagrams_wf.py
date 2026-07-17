@@ -1,7 +1,7 @@
 from agent.state import AppState
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import SystemMessage
-from langfuse.decorators import observe
+from langfuse import observe
 import uuid
 import json
 from agent.tools.images import search_images
