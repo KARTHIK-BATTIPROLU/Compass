@@ -150,3 +150,41 @@ Nodes: ['__start__', 'context_loader', 'router', 'detailed_wf', 'curriculum_wf',
 | `memory_writer` extracts topic and writes to `topics` / `user_topic_events` | ✅ DONE | Implemented in `_extract_topics` and Postgres helpers |
 | Learner `My Progress` page renders weakness data from backend | ✅ DONE | Created `/learn/progress/page.tsx` pulling from `/api/memory/weakness` |
 | Learner `Sessions & Topics` page lists past sessions with topic pills | ✅ DONE | Created `/learn/topics/page.tsx` pulling from `/api/memory/topics` |
+
+---
+
+## Phase 4 & 5 — Curriculum Pipeline
+
+**Date:** 2026-07-18
+
+### Evidence
+
+#### 4.1 — Curriculum API Router
+- `routers/curriculum.py` built with `/upload` and `/files` endpoints.
+- `/upload` natively handles `fitz` (PyMuPDF) for PDFs and `docx` for DOCX files.
+- Uses `RecursiveCharacterTextSplitter` from `langchain-text-splitters` (chunk size 1000, overlap 150).
+- Chunks are embedded and upserted into Qdrant `curriculum_chunks` collection.
+- File metadata recorded in Postgres `curriculum_files` via Supabase.
+
+#### 4.2 — Curriculum UI
+- `apps/web/src/app/faculty/curriculum/page.tsx` built:
+  - Drag-and-drop file uploader accepting `.pdf` and `.docx`.
+  - Topic input field.
+  - "Indexed Library" list showing all previously uploaded files, their topics, and chunk counts fetched dynamically from the API.
+- Recompiles clean (`npx tsc --noEmit` returns 0 errors).
+
+#### 4.3 — Integration & Navigation
+- `Sidebar.tsx` updated with role-specific navigation links:
+  - Faculty: "Curriculum Library" (links to `/faculty/curriculum`)
+  - Learner: "My Progress" and "Sessions & Topics"
+- `main.py` updated to include `curriculum.router`.
+- Curriculum chunks are retrieved during `context_loader.py` and passed into `curriculum_wf.py` (which implements strict syllabus constraints).
+
+### Phase 4 & 5 Exit Criteria Status
+
+| Criterion | Status | Evidence |
+|---|---|---|
+| Faculty UI has a working drag/drop uploader for PDF/DOCX | ✅ DONE | `CurriculumUploadPage` in `/faculty/curriculum/page.tsx` |
+| Uploading a syllabus splits it and stores in Qdrant `curriculum_chunks` | ✅ DONE | Implemented in `routers/curriculum.py` `/upload` route |
+| `context_loader` retrieves curriculum chunks for faculty queries | ✅ DONE | Pre-existing in Phase 1 `context_loader.py` |
+| `curriculum_wf` constraints response strictly to syllabus | ✅ DONE | Pre-existing in Phase 1 `curriculum_wf.py` |

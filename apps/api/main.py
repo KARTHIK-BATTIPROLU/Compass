@@ -10,7 +10,7 @@ from pydantic import BaseModel
 from typing import List
 from langchain_core.messages import HumanMessage
 from agent.graph import get_compiled_graph, CHECKPOINTS_DB
-from routers import messages, health, quiz, memory
+from routers import messages, health, quiz, memory, curriculum
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +56,7 @@ app.include_router(messages.router)
 app.include_router(health.router)
 app.include_router(quiz.router)
 app.include_router(memory.router)
+app.include_router(curriculum.router)
 
 
 @app.get("/api/health")

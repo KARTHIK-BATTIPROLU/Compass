@@ -17,12 +17,41 @@ export function Sidebar({ sessions, role }: SidebarProps) {
     <div className="w-64 h-screen bg-slate-900/80 backdrop-blur-2xl border-r border-white/5 p-4 flex flex-col z-20">
       <Link 
         href={`/${role}`} 
-        className={`flex items-center gap-3 w-full py-3 px-4 mb-6 rounded-xl bg-slate-800/50 border border-white/5 text-white font-medium transition-all shadow-lg ${btnBg}`}
+        className={`flex items-center gap-3 w-full py-3 px-4 mb-2 rounded-xl bg-slate-800/50 border border-white/5 text-white font-medium transition-all shadow-lg ${btnBg}`}
       >
         <PlusCircle className="w-5 h-5 text-slate-300" />
         <span>New Session</span>
       </Link>
       
+      {role === "faculty" && (
+        <Link 
+          href="/faculty/curriculum" 
+          className="flex items-center gap-3 w-full py-3 px-4 mb-6 rounded-xl bg-slate-800/30 border border-transparent hover:bg-slate-800/50 hover:border-white/5 text-slate-300 hover:text-white font-medium transition-all"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
+          <span>Curriculum Library</span>
+        </Link>
+      )}
+
+      {role === "learner" && (
+        <>
+          <Link 
+            href="/learn/progress" 
+            className="flex items-center gap-3 w-full py-3 px-4 mb-1 rounded-xl bg-slate-800/30 border border-transparent hover:bg-slate-800/50 hover:border-white/5 text-slate-300 hover:text-white font-medium transition-all"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20v-6M6 20V10M18 20V4"/></svg>
+            <span>My Progress</span>
+          </Link>
+          <Link 
+            href="/learn/topics" 
+            className="flex items-center gap-3 w-full py-3 px-4 mb-6 rounded-xl bg-slate-800/30 border border-transparent hover:bg-slate-800/50 hover:border-white/5 text-slate-300 hover:text-white font-medium transition-all"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
+            <span>Sessions & Topics</span>
+          </Link>
+        </>
+      )}
+
       <div className="flex-1 overflow-y-auto space-y-1 pr-2">
         <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3 px-2">Recent Chats</div>
         {sessions.map(s => (

@@ -40,4 +40,5 @@ dependencies = [
     # Flashcard export
     "genanki>=0.13.0",
     "langgraph-checkpoint-sqlite>=3.1.0",
+    "langchain-text-splitters>=1.1.2",
 ]
