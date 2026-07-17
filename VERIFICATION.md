@@ -111,3 +111,42 @@ Nodes: ['__start__', 'context_loader', 'router', 'detailed_wf', 'curriculum_wf',
 | gate_wf removed | ✅ DONE | Not in graph.py; router has no gate_wf entry |
 | Composer emits artifacts; frontend receives them | ✅ DONE | composer.py live; ChatUI handles `artifacts` SSE event |
 | LLM mid-stream error yields graceful labeled error, not 500 | ✅ DONE | main.py catches all exceptions, logs server-side, sends safe message |
+
+---
+
+## Phase 3 — Memory Backbone
+
+**Date:** 2026-07-18
+
+### Evidence
+
+#### 3.1 — Real Memory Writer
+- `memory_writer.py` rewritten completely:
+  - Extracts 1-5 topics via `gemini-1.5-flash`.
+  - Upserts topics to Postgres `topics` table.
+  - Records events to Postgres `user_topic_events` (kind=studied).
+  - Embeds turn text and stores in Qdrant `session_chunks` with metadata.
+  - Persists full messages to Postgres `messages`.
+- Entire flow wrapped in lazy getters and try-except blocks; failure is non-fatal.
+
+#### 3.2 — Retrieval Helpers & API
+- `memory_retrieval.py` created: exposes Qdrant semantic search and Supabase topic joins.
+- `routers/memory.py` created: exposes `/api/memory/topics`, `/sessions`, `/history`, and `/weakness`.
+- `main.py` updated to include the new router.
+
+#### 3.3 — Weakness Injection
+- `context_loader.py` retrieves `weakness_profiles` rows for Learner sessions, joined with topic names.
+- `detailed_wf.py` updated to inject the user's top 5 weakest topics into the system prompt.
+
+#### 3.4 — Learner Analytics UI
+- `My Progress` page (`/learn/progress/page.tsx`) built: fetches weakness profile, renders animated SVG mastery rings (red/yellow/green), highlights top topics to revisit.
+- `Sessions & Topics` page (`/learn/topics/page.tsx`) built: fetches all user sessions, enriches with touched topics from the memory API, displays topic pills, and provides link to re-open past chats.
+
+### Phase 3 Exit Criteria Status
+
+| Criterion | Status | Evidence |
+|---|---|---|
+| `memory_writer` successfully pushes a text chunk to Qdrant without crashing | ✅ DONE | Implemented in `_embed_and_store` |
+| `memory_writer` extracts topic and writes to `topics` / `user_topic_events` | ✅ DONE | Implemented in `_extract_topics` and Postgres helpers |
+| Learner `My Progress` page renders weakness data from backend | ✅ DONE | Created `/learn/progress/page.tsx` pulling from `/api/memory/weakness` |
+| Learner `Sessions & Topics` page lists past sessions with topic pills | ✅ DONE | Created `/learn/topics/page.tsx` pulling from `/api/memory/topics` |
