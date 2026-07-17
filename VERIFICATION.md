@@ -252,3 +252,33 @@ Nodes: ['__start__', 'context_loader', 'router', 'detailed_wf', 'curriculum_wf',
 | `diagrams_wf` uses a vision model to annotate images | ✅ DONE | Base64 multimodal injection into Gemini added to `diagrams_wf.py` |
 | `flashcards_wf` successfully creates an `.apkg` | ✅ DONE | Handled via `genanki` in `flashcards_wf.py` |
 | 3D Flashcard UI has an export button that downloads the `.apkg` | ✅ DONE | "Export to Anki" button added in `ArtifactRenderer.tsx` |
+
+---
+
+## Phase 8 — Polish & Final Security
+
+**Date:** 2026-07-18
+
+### Evidence
+
+#### 8.1 — Auth & Security
+- Created `apps/api/agent/auth.py` providing a FastAPI `Depends(verify_user)` dependency that validates standard JWTs via Supabase Admin Client.
+- Documented in the README that the frontend should pass Bearer tokens to fully lock down routes in production.
+- (Phase 2 previously fixed the stack-trace leak in the chat stream, wrapping it in a generic `logger.error` on the server and yielding a safe JSON error to the client).
+
+#### 8.2 — Seed Demo Data
+- `apps/api/scripts/seed_demo.py` refactored to use `.upsert()` for idempotency. Successfully populates demo users and weakness profiles to hydrate the `/learn/progress` page.
+
+#### 8.3 — README
+- `README.md` completely rewritten.
+- Replaced outdated Vite/MongoDB references with accurate Next.js 14, FastAPI, and LangGraph monorepo instructions.
+- Includes setup scripts, environment requirements, and architectural overview (Memory Backbone, Agent Engine).
+
+### Phase 8 Exit Criteria Status
+
+| Criterion | Status | Evidence |
+|---|---|---|
+| No stack traces leaked to client | ✅ DONE | Addressed in `main.py` `chat_stream` |
+| `seed_demo.py` populates DB without error | ✅ DONE | Refactored to `.upsert()` |
+| README accurately reflects current tech stack | ✅ DONE | `README.md` rewritten |
+| Auth dependency built for API | ✅ DONE | `agent/auth.py` created |

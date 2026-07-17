@@ -10,7 +10,7 @@ def seed():
     print("Seeding Demo Data...")
     
     # 1. Faculty User
-    f_res = supabase.table("users").insert({
+    f_res = supabase.table("users").upsert({
         "id": "demo-faculty-123",
         "role": "faculty",
         "name": "Prof. Demo",
@@ -21,7 +21,7 @@ def seed():
     print("Seeded Faculty User.")
 
     # 2. Learner User
-    l_res = supabase.table("users").insert({
+    l_res = supabase.table("users").upsert({
         "id": "demo-learner-456",
         "role": "learner",
         "name": "Alex Learner",
@@ -32,14 +32,14 @@ def seed():
     print("Seeded Learner User.")
 
     # 3. Learner Weakness Profile
-    supabase.table("weakness_profiles").insert({
+    supabase.table("weakness_profiles").upsert({
         "user_id": "demo-learner-456",
         "topic_id": "Cell Biology",
         "mastery": 0.3,
         "last_seen": "2026-07-15T00:00:00Z"
     }).execute()
     
-    supabase.table("weakness_profiles").insert({
+    supabase.table("weakness_profiles").upsert({
         "user_id": "demo-learner-456",
         "topic_id": "Photosynthesis",
         "mastery": 0.8,
