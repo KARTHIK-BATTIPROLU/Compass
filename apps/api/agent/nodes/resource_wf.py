@@ -3,7 +3,7 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import SystemMessage
 from langfuse import observe
 import uuid
-from agent.tools.search import search_web, search_arxiv
+from agent.tools.search import search_web, search_arxiv, search_semantic_scholar
 
 @observe()
 async def resource_wf_node(state: AppState):
@@ -12,6 +12,7 @@ async def resource_wf_node(state: AppState):
     
     web_results = await search_web(f"news {prompt}")
     arxiv_results = await search_arxiv(prompt)
+    scholar_results = await search_semantic_scholar(prompt)
     
     system_prompt = f"""You are LearnForge, generating a Resource Card for a Learner.
 Synthesize the sources into an easy-to-understand summary.
@@ -33,6 +34,9 @@ WEB SOURCES:
 
 ARXIV SOURCES:
 {arxiv_results}
+
+SEMANTIC SCHOLAR SOURCES:
+{scholar_results}
 """
 
     messages = [SystemMessage(content=system_prompt)] + state.get("messages", [])

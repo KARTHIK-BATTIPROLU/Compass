@@ -54,3 +54,22 @@ async def search_arxiv(query: str) -> str:
     except Exception as e:
         logger.warning(f"arXiv search failed for '{query}': {e}")
         return "No arXiv results found."
+
+async def search_semantic_scholar(query: str, limit: int = 3) -> list:
+    """Search Semantic Scholar via REST API."""
+    import httpx
+    url = "https://api.semanticscholar.org/graph/v1/paper/search"
+    params = {
+        "query": query,
+        "limit": limit,
+        "fields": "title,url,authors,year,abstract"
+    }
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            res = await client.get(url, params=params)
+            res.raise_for_status()
+            data = res.json()
+            return data.get("data", [])
+    except Exception as e:
+        logger.warning(f"Semantic Scholar search failed for '{query}': {e}")
+        return []

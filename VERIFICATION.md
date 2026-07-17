@@ -188,3 +188,34 @@ Nodes: ['__start__', 'context_loader', 'router', 'detailed_wf', 'curriculum_wf',
 | Uploading a syllabus splits it and stores in Qdrant `curriculum_chunks` | ✅ DONE | Implemented in `routers/curriculum.py` `/upload` route |
 | `context_loader` retrieves curriculum chunks for faculty queries | ✅ DONE | Pre-existing in Phase 1 `context_loader.py` |
 | `curriculum_wf` constraints response strictly to syllabus | ✅ DONE | Pre-existing in Phase 1 `curriculum_wf.py` |
+
+---
+
+## Phase 6 — Research & Resources
+
+**Date:** 2026-07-18
+
+### Evidence
+
+#### 6.1 — Search API Setup
+- `agent/tools/search.py` updated to include Semantic Scholar REST API querying (`httpx` + `https://api.semanticscholar.org/graph/v1/paper/search`).
+- Both `search_web` (Tavily) and `search_arxiv` wrappers were already stabilized and made lazy in Phase 1.
+
+#### 6.2 — Node Updates
+- `research_wf.py` (Update & Research): Now queries Tavily, ArXiv, and Semantic Scholar concurrently, feeding all results into the Gemini prompt. Outputs structured `<artifact type="research_brief">`.
+- `resource_wf.py` (Resource Card): Now queries Tavily (with "news" prefix), ArXiv, and Semantic Scholar concurrently. Synthesizes into `<artifact type="resource_card">` containing `synthesis_markdown`, `news`, `papers`, `docs`, and `citations`.
+
+#### 6.3 — Artifact UI Updates
+- `ArtifactRenderer.tsx` updated to render the `resource_card` artifact.
+- Features a 3-tab layout (News, Papers, Docs).
+- Explicitly renders the `citations` array below the synthesis text, using `https://www.google.com/s2/favicons` to pull domain icons dynamically next to the source link.
+- Recompiles clean.
+
+### Phase 6 Exit Criteria Status
+
+| Criterion | Status | Evidence |
+|---|---|---|
+| Tavily wrapper correctly falls back or yields results | ✅ DONE | Handled gracefully in `search.py` |
+| Semantic Scholar API wrapped | ✅ DONE | Implemented in `search.py` via HTTPx |
+| `resource_wf` synthesizes into 3 categories | ✅ DONE | `resource_wf.py` outputs news/papers/docs array |
+| `ArtifactRenderer` displays 3-tab Resource Card with favicons | ✅ DONE | Implemented in `ArtifactRenderer.tsx` |

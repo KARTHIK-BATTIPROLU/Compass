@@ -283,6 +283,30 @@ export function ArtifactRenderer({ content, artifactType }: ArtifactRendererProp
           <div className="prose prose-invert prose-cyan max-w-none prose-sm border-t border-cyan-500/20 pt-4">
             <ReactMarkdown>{data.synthesis_markdown}</ReactMarkdown>
           </div>
+          {data.citations?.length > 0 && (
+            <div className="border-t border-cyan-500/20 pt-4 mt-4">
+              <h4 className="text-cyan-400 font-semibold mb-2 text-xs uppercase tracking-wider">Citations</h4>
+              <ul className="space-y-2 text-sm text-slate-300">
+                {data.citations.map((c: any, i: number) => {
+                  let domain = "";
+                  try { domain = new URL(c.url).hostname; } catch {}
+                  return (
+                    <li key={i} className="flex items-start gap-2">
+                      <span className="text-cyan-500 font-mono text-xs mt-0.5">[{c.id}]</span>
+                      {domain && (
+                        <img 
+                          src={`https://www.google.com/s2/favicons?domain=${domain}&sz=16`} 
+                          alt="" 
+                          className="w-4 h-4 mt-0.5 opacity-70"
+                        />
+                      )}
+                      <a href={c.url} target="_blank" className="hover:text-cyan-300 underline break-all">{c.title}</a>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
         </div>
       );
     } catch { return <div className="text-red-400 p-4 border border-red-500/20 rounded-xl">Error parsing resource card.</div>; }

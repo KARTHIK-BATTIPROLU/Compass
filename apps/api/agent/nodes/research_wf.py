@@ -3,7 +3,7 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import SystemMessage
 from langfuse import observe
 import uuid
-from agent.tools.search import search_web, search_arxiv
+from agent.tools.search import search_web, search_arxiv, search_semantic_scholar
 
 @observe()
 async def research_wf_node(state: AppState):
@@ -13,6 +13,7 @@ async def research_wf_node(state: AppState):
     
     web_results = await search_web(prompt)
     arxiv_results = await search_arxiv(prompt)
+    scholar_results = await search_semantic_scholar(prompt)
     
     system_prompt = f"""You are LearnForge, generating an 'Update & Research' brief for a Faculty member teaching {class_level}.
 Using the provided sources, generate a relevance-ranked brief summarizing recent developments and specifically including a "Why this matters for your class" section.
@@ -34,6 +35,9 @@ WEB SOURCES:
 
 ARXIV SOURCES:
 {arxiv_results}
+
+SEMANTIC SCHOLAR SOURCES:
+{scholar_results}
 """
 
     messages = [SystemMessage(content=system_prompt)] + state.get("messages", [])
