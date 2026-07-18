@@ -183,6 +183,14 @@ CREATE POLICY quizzes_owner_select ON quizzes FOR SELECT USING (
 -- No INSERT/UPDATE policy for anon/authenticated: quizzes are only ever
 -- created by quiz_wf_node via the service-role client, which bypasses RLS.
 
+-- Public share-link access: the /q/[token] page reads this directly via
+-- Supabase with the anon key (respondents are never logged in). share_token
+-- is the bearer secret; RLS can't scope "only when queried by the right
+-- token" (that's application-layer), so this scopes public reads to open
+-- quizzes only — the same access routers/quiz.py's GET /api/quiz/{token}
+-- already grants via the service key.
+CREATE POLICY quizzes_public_read_open ON quizzes FOR SELECT USING (open = true);
+
 -- quiz_responses: owning teacher can read; public submit is server-mediated
 CREATE POLICY quiz_responses_owner_select ON quiz_responses FOR SELECT USING (
     EXISTS (

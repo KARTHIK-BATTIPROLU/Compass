@@ -26,9 +26,7 @@ export default async function FacultyChatPage({ params }: { params: { id: string
   ];
 
   return (
-    <main className="h-full bg-slate-950 flex flex-col relative">
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-indigo-900/40 via-slate-950 to-slate-950 opacity-80 pointer-events-none" />
-      
+    <main className="h-full flex flex-col relative">
       <SessionHeader role="faculty" contextInfo={{ classLevel: session?.class_level, language: userRecord?.language }} />
       
       <div className="relative z-10 flex-1 overflow-hidden">
