@@ -67,7 +67,8 @@ export function ChatUI({ sessionId, role, availableChips, initialMessages = [] }
     setMessages(prev => [...prev, { role: "assistant", content: "", artifacts: [], citations: [] }]);
 
     try {
-      const response = await fetch(`${API_BASE}/api/chat/stream`, {
+      const { authedFetch } = await import("@/lib/api");
+      const response = await authedFetch(`${API_BASE}/api/chat/stream`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

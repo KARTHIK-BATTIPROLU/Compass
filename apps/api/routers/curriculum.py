@@ -8,10 +8,11 @@ import os
 import uuid
 import logging
 from typing import List
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends
 from pydantic import BaseModel
 import fitz  # PyMuPDF
 import docx
+from agent.auth import get_current_user
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/curriculum", tags=["curriculum"])
@@ -96,7 +97,7 @@ def extract_text_from_docx(file_bytes: bytes) -> str:
 async def upload_curriculum(
     file: UploadFile = File(...),
     topic: str = Form(...),
-    user_id: str = Form(...)
+    user = Depends(get_current_user)
 ):
     """
     Parses PDF/DOCX, splits into chunks, embeds, and upserts to Qdrant.
@@ -136,7 +137,7 @@ async def upload_curriculum(
     try:
         sb.table("curriculum_files").insert({
             "id": file_id,
-            "user_id": user_id,
+            "user_id": user.id,
             "filename": file.filename,
             "topic": topic,
             "chunk_count": len(chunks)
@@ -158,7 +159,7 @@ async def upload_curriculum(
                     vector=vector,
                     payload={
                         "file_id": file_id,
-                        "user_id": user_id,
+                        "user_id": user.id,
                         "filename": file.filename,
                         "topic": topic,
                         "page_content": chunk, # Keep schema matched with langchain QdrantVectorStore
@@ -190,7 +191,7 @@ async def upload_curriculum(
 
 
 @router.get("/files")
-def list_curriculum_files(user_id: str):
+def list_curriculum_files(user = Depends(get_current_user)):
     """List all curriculum files uploaded by the user."""
     sb = get_supabase()
     if not sb:
@@ -199,7 +200,7 @@ def list_curriculum_files(user_id: str):
     try:
         res = sb.table("curriculum_files")\
                 .select("*")\
-                .eq("user_id", user_id)\
+                .eq("user_id", user.id)\
                 .order("created_at", desc=True)\
                 .execute()
         return {"files": res.data or []}

@@ -6,13 +6,14 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, Request, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, FileResponse
 from pydantic import BaseModel
 from typing import List
 from langchain_core.messages import HumanMessage
 from agent.graph import get_compiled_graph, CHECKPOINTS_DB
+from agent.auth import get_current_user, user_owns_session
 from routers import messages, health, quiz, memory, curriculum
 
 logger = logging.getLogger(__name__)
@@ -92,13 +93,19 @@ class ChatRequest(BaseModel):
 
 
 @app.post("/api/chat/stream")
-async def chat_stream(req: Request, chat_req: ChatRequest):
+async def chat_stream(req: Request, chat_req: ChatRequest, user = Depends(get_current_user)):
     # ── Input validation ────────────────────────────────────────────────────
     if not chat_req.session_id or not chat_req.session_id.strip():
         async def _err():
             yield f"data: {json.dumps({'type': 'error', 'content': 'session_id is required'})}\n\n"
             yield "data: [DONE]\n\n"
         return StreamingResponse(_err(), media_type="text/event-stream")
+
+    if not user_owns_session(user.id, chat_req.session_id):
+        async def _err():
+            yield f"data: {json.dumps({'type': 'error', 'content': 'Forbidden: You do not own this session'})}\n\n"
+            yield "data: [DONE]\n\n"
+        return StreamingResponse(_err(), media_type="text/event-stream", status_code=403)
 
     if not chat_req.prompt or not chat_req.prompt.strip():
         async def _err():

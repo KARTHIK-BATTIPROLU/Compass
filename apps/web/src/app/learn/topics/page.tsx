@@ -44,7 +44,8 @@ export default function SessionsTopicsPage() {
       const enriched: Session[] = await Promise.all(
         sessData.map(async (s) => {
           try {
-            const res = await fetch(`${API}/api/memory/topics/${s.id}`);
+            const { authedFetch } = await import("@/lib/api");
+            const res = await authedFetch(`${API}/api/memory/topics/${s.id}`);
             const data = await res.json();
             return { ...s, topics: data.topics || [] };
           } catch {

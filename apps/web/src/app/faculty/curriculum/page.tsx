@@ -31,7 +31,8 @@ export default function CurriculumUploadPage() {
     if (!user) return;
 
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/curriculum/files?user_id=${user.id}`);
+      const { authedFetch } = await import("@/lib/api");
+      const res = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/curriculum/files`);
       const data = await res.json();
       setFiles(data.files || []);
     } catch (e) {
@@ -64,10 +65,10 @@ export default function CurriculumUploadPage() {
     const formData = new FormData();
     formData.append("file", selectedFile);
     formData.append("topic", topic.trim());
-    formData.append("user_id", user.id);
 
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/curriculum/upload`, {
+      const { authedFetch } = await import("@/lib/api");
+      const res = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/curriculum/upload`, {
         method: "POST",
         body: formData,
       });

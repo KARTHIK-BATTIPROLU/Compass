@@ -42,12 +42,20 @@ async def submit_quiz(token: str, req: QuizResponse):
     
     return {"status": "success"}
     
+from agent.auth import get_current_user, user_owns_session
+from fastapi import Depends
+
 @router.get("/api/quiz/{token}/results")
-async def get_quiz_results(token: str):
-    res = supabase.table("quizzes").select("id").eq("share_token", token).execute()
+async def get_quiz_results(token: str, user = Depends(get_current_user)):
+    res = supabase.table("quizzes").select("id, artifacts(session_id)").eq("share_token", token).execute()
     if not res.data:
         raise HTTPException(status_code=404)
         
     db_quiz_id = res.data[0]["id"]
+    session_id = res.data[0].get("artifacts", {}).get("session_id")
+    
+    if session_id and not user_owns_session(user.id, session_id):
+        raise HTTPException(status_code=403, detail="Forbidden")
+        
     results = supabase.table("quiz_responses").select("*").eq("quiz_id", db_quiz_id).execute()
     return results.data
