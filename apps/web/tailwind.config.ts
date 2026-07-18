@@ -13,6 +13,20 @@ const config: Config = {
         foreground: "var(--foreground)",
         border: "var(--border)",
         ring: "var(--ring)",
+        // Midnight Forge palette
+        "bg-deep": "var(--bg-deep)",
+        "bg-panel": "var(--bg-panel)",
+        ember: {
+          DEFAULT: "var(--ember)",
+          hot: "var(--ember-hot)",
+          deep: "var(--ember-deep)",
+        },
+        steel: "var(--steel)",
+        mint: "var(--mint-signal)",
+      },
+      fontFamily: {
+        display: ["var(--font-display)", "serif"],
+        mono: ["var(--font-geist-mono)", "monospace"],
       },
     },
   },

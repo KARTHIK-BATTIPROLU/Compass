@@ -12,10 +12,23 @@
 
 @layer base {
   .theme {
-    --font-heading: var(--font-sans);
+    --font-heading: var(--font-display);
     --font-sans: var(--font-sans);
   }
   :root {
+    /* ── Midnight Forge design tokens (Final Sprint Part C) ──────────────── */
+    --bg-deep: #0b0f1a;
+    --bg-panel: rgba(20, 26, 43, 0.55);
+    --ember: #f59e5b;
+    --ember-hot: #fbbf74;
+    --ember-deep: #b8541f;
+    --steel: #8b9bb4;
+    --mint-signal: #6ee7b7;
+    /* Platform tint — faculty warms toward ember, learner cools toward teal.
+       Consumed by .platform-mesh's radial gradient stops. */
+    --platform-tint: var(--ember);
+    --was-seam: linear-gradient(180deg, var(--mint-signal) 0%, var(--ember) 55%, var(--ember-deep) 100%);
+
     --background: oklch(1 0 0);
     --foreground: oklch(0.145 0 0);
     --card: oklch(1 0 0);
@@ -142,5 +155,79 @@
      (streaming chat bubbles, inputs) where a live SVG filter would jank */
   .liquid-glass-flat::after {
     filter: none;
+  }
+}
+
+/* ── Midnight Forge — Final Sprint Part C ─────────────────────────────────── */
+@layer components {
+  .font-display {
+    font-family: var(--font-display), serif;
+  }
+
+  /* The signature element: a 3px seam running weak(mint) -> average(ember) ->
+     strong(deep ember). Used on W-A-S script sections, the W-A-S chip when
+     active, mastery rings, and the landing hero. */
+  .was-seam {
+    background: var(--was-seam);
+  }
+  .was-seam-text {
+    background: var(--was-seam);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* Warm (faculty) / cool (learner) radial gradient mesh backgrounds — same
+     system, two temperatures, so users always know which door they're in. */
+  .platform-mesh {
+    background-color: var(--bg-deep);
+    background-image:
+      radial-gradient(ellipse 80% 50% at 20% -10%, color-mix(in srgb, var(--platform-tint) 20%, transparent), transparent),
+      radial-gradient(ellipse 60% 40% at 100% 100%, color-mix(in srgb, var(--platform-tint) 12%, transparent), transparent);
+  }
+  .platform-mesh-faculty {
+    --platform-tint: var(--ember);
+  }
+  .platform-mesh-learner {
+    --platform-tint: var(--mint-signal);
+  }
+
+  /* Reserved amber glow — only the active artifact panel and active chips
+     get this. Nothing else glows. */
+  .ember-glow {
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--ember) 50%, transparent), 0 8px 32px -8px color-mix(in srgb, var(--ember) 45%, transparent);
+  }
+
+  /* Glass shimmer skeleton for loading states */
+  .skeleton-shimmer {
+    background: linear-gradient(
+      100deg,
+      rgba(255, 255, 255, 0.04) 30%,
+      rgba(255, 255, 255, 0.09) 50%,
+      rgba(255, 255, 255, 0.04) 70%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.8s ease-in-out infinite;
+  }
+  @keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+}
+
+/* Visible keyboard focus everywhere — ember ring, quality-floor requirement */
+:focus-visible {
+  outline: 2px solid var(--ember);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* prefers-reduced-motion: kill springs/rings/shimmer, keep instant state changes */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
