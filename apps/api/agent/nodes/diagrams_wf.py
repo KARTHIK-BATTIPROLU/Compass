@@ -1,5 +1,5 @@
 from agent.state import AppState
-from langchain_google_genai import ChatGoogleGenerativeAI
+from agent.llm import get_llm
 from langchain_core.messages import SystemMessage, HumanMessage
 from langfuse import observe
 import uuid
@@ -23,7 +23,7 @@ async def fetch_image_b64(url: str) -> str:
 
 @observe()
 async def diagrams_wf_node(state: AppState):
-    llm = ChatGoogleGenerativeAI(model="gemini-1.5-pro", temperature=0.2)
+    llm = get_llm(temperature=0.2)
     prompt = state.get("prompt", "")
     
     # 1. Search for images

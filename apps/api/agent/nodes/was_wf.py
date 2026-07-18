@@ -1,5 +1,5 @@
 from agent.state import AppState
-from langchain_google_genai import ChatGoogleGenerativeAI
+from agent.llm import get_llm
 from langchain_core.messages import SystemMessage
 from langfuse import observe
 import uuid
@@ -48,7 +48,7 @@ async def was_wf_node(state: AppState):
             "artifacts": artifacts,
         }
 
-    llm = ChatGoogleGenerativeAI(model="gemini-1.5-pro", temperature=0.3)
+    llm = get_llm(temperature=0.3)
 
     # ── Build flow context ──────────────────────────────────────────────────
     flow_str = json.dumps(lecture_flow, indent=2)

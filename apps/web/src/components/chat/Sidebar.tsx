@@ -14,10 +14,10 @@ export function Sidebar({ sessions, role }: SidebarProps) {
     : 'hover:bg-violet-600/20 hover:border-violet-500/30';
 
   return (
-    <div className="w-64 h-screen bg-slate-900/80 backdrop-blur-2xl border-r border-white/5 p-4 flex flex-col z-20">
+    <div className="liquid-glass liquid-glass-lg w-64 h-screen bg-slate-900/80 border-r border-white/5 p-4 flex flex-col z-20">
       <Link 
         href={`/${role}`} 
-        className={`flex items-center gap-3 w-full py-3 px-4 mb-2 rounded-xl bg-slate-800/50 border border-white/5 text-white font-medium transition-all shadow-lg ${btnBg}`}
+        className={`liquid-glass liquid-glass-sm flex items-center gap-3 w-full py-3 px-4 mb-2 rounded-xl bg-slate-800/50 border border-white/5 text-white font-medium transition-all shadow-lg ${btnBg}`}
       >
         <PlusCircle className="w-5 h-5 text-slate-300" />
         <span>New Session</span>

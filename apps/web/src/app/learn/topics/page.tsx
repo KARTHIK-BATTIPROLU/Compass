@@ -76,7 +76,7 @@ export default function SessionsTopicsPage() {
             <div className="w-8 h-8 rounded-full border-2 border-indigo-400 border-t-transparent animate-spin" />
           </div>
         ) : sessions.length === 0 ? (
-          <div className="bg-slate-800/40 border border-white/10 rounded-3xl p-12 text-center">
+          <div className="liquid-glass bg-slate-800/40 border border-white/10 rounded-3xl p-12 text-center">
             <span className="text-5xl mb-4 block">🗓️</span>
             <h2 className="text-xl font-semibold text-slate-200 mb-2">No Sessions Yet</h2>
             <p className="text-slate-400 text-sm">Start a chat session to see it here.</p>
@@ -90,7 +90,7 @@ export default function SessionsTopicsPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.04 }}
                 onClick={() => setSelected(selected?.id === sess.id ? null : sess)}
-                className="bg-slate-800/40 border border-white/10 hover:border-white/20 rounded-2xl p-5 cursor-pointer transition-all backdrop-blur-md group"
+                className="liquid-glass liquid-glass-sm bg-slate-800/40 border border-white/10 hover:border-white/20 rounded-2xl p-5 cursor-pointer transition-all group"
               >
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex items-center gap-3">

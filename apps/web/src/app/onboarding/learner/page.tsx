@@ -5,7 +5,7 @@ export default function LearnerOnboardingPage() {
     <main className="min-h-screen flex items-center justify-center relative overflow-hidden bg-slate-950 text-slate-50">
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-violet-900 via-slate-950 to-slate-950 opacity-80" />
       <div className="relative z-10 w-full max-w-md px-4">
-        <div className="bg-slate-900/40 backdrop-blur-xl rounded-3xl p-8 border border-white/10 shadow-2xl">
+        <div className="liquid-glass liquid-glass-lg bg-slate-900/40 rounded-3xl p-8 border border-white/10 shadow-2xl">
           <h1 className="text-3xl font-bold text-white mb-2">Welcome, Learner!</h1>
           <p className="text-slate-400 mb-8 font-light">Let's set up your profile so we can provide the best resources for your level.</p>
           

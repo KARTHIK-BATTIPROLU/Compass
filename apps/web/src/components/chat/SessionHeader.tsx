@@ -25,7 +25,7 @@ export function SessionHeader({ role, contextInfo }: SessionHeaderProps) {
   }, [role]);
 
   return (
-    <div className="h-16 border-b border-white/5 bg-slate-900/30 backdrop-blur-md flex items-center justify-between px-6 z-20 relative">
+    <div className="liquid-glass liquid-glass-sm h-16 border-b border-white/5 bg-slate-900/30 flex items-center justify-between px-6 z-20 relative">
       <div className="flex items-center gap-3 text-white font-medium">
         <div className={`p-1.5 rounded-lg ${role === 'faculty' ? 'bg-indigo-500/20' : 'bg-violet-500/20'}`}>
           <User className={`w-4 h-4 ${role === 'faculty' ? 'text-indigo-400' : 'text-violet-400'}`} />

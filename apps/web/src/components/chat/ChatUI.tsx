@@ -199,7 +199,7 @@ export function ChatUI({ sessionId, role, availableChips, initialMessages = [] }
               transition={{ duration: 0.25 }}
               className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
             >
-              <div className={`max-w-[85%] rounded-3xl p-6 backdrop-blur-xl border shadow-xl ${
+              <div className={`liquid-glass liquid-glass-flat max-w-[85%] rounded-3xl p-6 border shadow-xl ${
                 msg.role === "user"
                   ? `${userBgClass} text-white rounded-br-sm`
                   : msg.isError
@@ -258,7 +258,7 @@ export function ChatUI({ sessionId, role, availableChips, initialMessages = [] }
             animate={{ opacity: 1 }}
             className="flex justify-start"
           >
-            <div className="bg-slate-800/40 border border-white/10 p-4 rounded-3xl rounded-bl-sm shadow-xl">
+            <div className="liquid-glass liquid-glass-flat bg-slate-800/40 border border-white/10 p-4 rounded-3xl rounded-bl-sm shadow-xl">
               <Loader2 className="w-5 h-5 animate-spin text-slate-400" />
             </div>
           </motion.div>
@@ -273,7 +273,7 @@ export function ChatUI({ sessionId, role, availableChips, initialMessages = [] }
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Ask a question..."
-            className={`w-full bg-slate-900/60 backdrop-blur-md border border-slate-700 ${focusBorderClass} rounded-2xl py-4 pl-6 pr-14 text-white outline-none shadow-2xl transition-all placeholder:text-slate-500`}
+            className={`liquid-glass liquid-glass-sm liquid-glass-flat w-full bg-slate-900/60 border border-slate-700 ${focusBorderClass} rounded-2xl py-4 pl-6 pr-14 text-white outline-none shadow-2xl transition-all placeholder:text-slate-500`}
           />
           <motion.button
             type="submit"

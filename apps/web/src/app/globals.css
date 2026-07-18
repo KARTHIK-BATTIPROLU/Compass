@@ -92,3 +92,55 @@
     @apply font-sans;
   }
 }
+
+/* Liquid glass — frosted, SVG-distorted glass surfaces used for cards/panels/bars.
+   Tint/border/radius/shadow stay on the host element's own Tailwind classes;
+   these pseudo-elements only add the refractive blur + inner highlight. */
+@layer components {
+  .liquid-glass {
+    position: relative;
+    isolation: isolate;
+  }
+  .liquid-glass::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    border-radius: inherit;
+    box-shadow:
+      inset 0 1px 1px 0 rgba(255, 255, 255, 0.14),
+      inset 0 0 26px -10px rgba(255, 255, 255, 0.35);
+    pointer-events: none;
+  }
+  .liquid-glass::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    filter: url(#glass-distortion);
+    pointer-events: none;
+  }
+
+  /* sm: thin bars, pills, list rows — gentle distortion */
+  .liquid-glass-sm::after {
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    filter: url(#glass-distortion-sm);
+  }
+
+  /* lg: hero panels, sidebars, auth cards — pronounced ripple */
+  .liquid-glass-lg::after {
+    backdrop-filter: blur(32px);
+    -webkit-backdrop-filter: blur(32px);
+    filter: url(#glass-distortion-lg);
+  }
+
+  /* flat: same frosted blur, no turbulence — for surfaces that repaint often
+     (streaming chat bubbles, inputs) where a live SVG filter would jank */
+  .liquid-glass-flat::after {
+    filter: none;
+  }
+}

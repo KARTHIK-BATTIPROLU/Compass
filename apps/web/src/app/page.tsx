@@ -36,7 +36,7 @@ export default function Home() {
               className="h-full relative overflow-hidden rounded-3xl p-[1px] bg-gradient-to-b from-white/15 to-white/5"
             >
               <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-violet-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-              <div className="h-full bg-slate-900/40 backdrop-blur-xl rounded-3xl p-8 flex flex-col items-center text-center border border-white/10 shadow-2xl transition-all duration-300 group-hover:border-indigo-400/50 group-hover:shadow-indigo-500/20 group-focus:ring-2 group-focus:ring-indigo-400">
+              <div className="liquid-glass liquid-glass-lg h-full bg-slate-900/40 rounded-3xl p-8 flex flex-col items-center text-center border border-white/10 shadow-2xl transition-all duration-300 group-hover:border-indigo-400/50 group-hover:shadow-indigo-500/20 group-focus:ring-2 group-focus:ring-indigo-400">
                 <div className="w-16 h-16 rounded-2xl bg-indigo-500/20 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300 group-hover:bg-indigo-500/30">
                   <GraduationCap className="w-8 h-8 text-indigo-300" />
                 </div>
@@ -56,7 +56,7 @@ export default function Home() {
               className="h-full relative overflow-hidden rounded-3xl p-[1px] bg-gradient-to-b from-white/15 to-white/5"
             >
               <div className="absolute inset-0 bg-gradient-to-br from-violet-500/10 to-fuchsia-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-              <div className="h-full bg-slate-900/40 backdrop-blur-xl rounded-3xl p-8 flex flex-col items-center text-center border border-white/10 shadow-2xl transition-all duration-300 group-hover:border-violet-400/50 group-hover:shadow-violet-500/20 group-focus:ring-2 group-focus:ring-violet-400">
+              <div className="liquid-glass liquid-glass-lg h-full bg-slate-900/40 rounded-3xl p-8 flex flex-col items-center text-center border border-white/10 shadow-2xl transition-all duration-300 group-hover:border-violet-400/50 group-hover:shadow-violet-500/20 group-focus:ring-2 group-focus:ring-violet-400">
                 <div className="w-16 h-16 rounded-2xl bg-violet-500/20 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300 group-hover:bg-violet-500/30">
                   <BookOpen className="w-8 h-8 text-violet-300" />
                 </div>

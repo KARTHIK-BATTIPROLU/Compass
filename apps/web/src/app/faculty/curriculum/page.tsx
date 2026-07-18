@@ -111,7 +111,7 @@ export default function CurriculumUploadPage() {
             </p>
           </div>
 
-          <form onSubmit={handleUpload} className="bg-slate-800/40 border border-white/10 rounded-3xl p-6 md:p-8 backdrop-blur-md shadow-2xl">
+          <form onSubmit={handleUpload} className="liquid-glass liquid-glass-lg bg-slate-800/40 border border-white/10 rounded-3xl p-6 md:p-8 shadow-2xl">
             
             <div className="space-y-5">
               <div>
@@ -211,7 +211,7 @@ export default function CurriculumUploadPage() {
                <Loader2 className="w-6 h-6 animate-spin text-indigo-400" />
              </div>
           ) : files.length === 0 ? (
-            <div className="bg-slate-800/40 border border-white/10 rounded-3xl p-12 text-center flex flex-col items-center">
+            <div className="liquid-glass bg-slate-800/40 border border-white/10 rounded-3xl p-12 text-center flex flex-col items-center">
               <FileText className="w-12 h-12 text-slate-600 mb-4" />
               <h3 className="text-lg font-medium text-slate-300">Library is empty</h3>
               <p className="text-sm text-slate-500 mt-1">Upload a document to build your knowledge base.</p>
@@ -224,7 +224,7 @@ export default function CurriculumUploadPage() {
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: i * 0.05 }}
-                  className="bg-slate-800/40 border border-white/10 rounded-2xl p-4 flex items-start gap-4 backdrop-blur-md"
+                  className="liquid-glass liquid-glass-sm bg-slate-800/40 border border-white/10 rounded-2xl p-4 flex items-start gap-4"
                 >
                   <div className="w-10 h-10 rounded-xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center shrink-0">
                     <FileText className="w-5 h-5 text-indigo-300" />

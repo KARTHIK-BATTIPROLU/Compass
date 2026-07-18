@@ -99,7 +99,7 @@ function ScriptArtifact({ content, downloadUrl }: { content: string, downloadUrl
   ];
 
   return (
-    <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-3xl overflow-hidden shadow-2xl mt-2">
+    <div className="liquid-glass bg-indigo-500/10 border border-indigo-500/20 rounded-3xl overflow-hidden shadow-2xl mt-2">
       <div className="bg-indigo-600/30 border-b border-white/10 px-5 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <FileText className="w-5 h-5 text-indigo-300" />
@@ -143,7 +143,7 @@ function SlidesArtifact({ content, downloadUrl }: { content: string, downloadUrl
   const [current, setCurrent] = useState(0);
 
   return (
-    <div className="bg-purple-500/10 border border-purple-500/20 rounded-3xl overflow-hidden shadow-2xl mt-2">
+    <div className="liquid-glass bg-purple-500/10 border border-purple-500/20 rounded-3xl overflow-hidden shadow-2xl mt-2">
       <div className="bg-purple-600/30 border-b border-white/10 px-5 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Presentation className="w-5 h-5 text-purple-300" />
@@ -196,7 +196,7 @@ function SlidesArtifact({ content, downloadUrl }: { content: string, downloadUrl
 function FlowArtifact({ content, downloadUrl }: { content: string, downloadUrl?: string }) {
   const rawContent = content.replace(/<artifact[^>]*>/g, "").replace(/<\/artifact>/g, "").trim();
   return (
-    <div className="bg-teal-500/10 border border-teal-500/20 rounded-3xl overflow-hidden shadow-2xl mt-2">
+    <div className="liquid-glass bg-teal-500/10 border border-teal-500/20 rounded-3xl overflow-hidden shadow-2xl mt-2">
       <div className="bg-teal-600/30 border-b border-white/10 px-5 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Layers className="w-5 h-5 text-teal-300" />
@@ -242,7 +242,7 @@ export function ArtifactRenderer({ content, artifactType, downloadUrl }: Artifac
   if (quizMatch) {
     const token = quizMatch[1];
     return (
-      <div className="bg-emerald-500/10 border border-emerald-500/20 p-6 rounded-3xl shadow-xl mt-4">
+      <div className="liquid-glass bg-emerald-500/10 border border-emerald-500/20 p-6 rounded-3xl shadow-xl mt-4">
         <h3 className="text-emerald-300 font-bold mb-2 flex items-center gap-2">
           <span className="relative flex h-3 w-3">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
@@ -261,7 +261,7 @@ export function ArtifactRenderer({ content, artifactType, downloadUrl }: Artifac
 
   if (worksheetMatch) {
     return (
-      <div className="bg-blue-500/10 border border-blue-500/20 p-6 rounded-3xl shadow-xl mt-4">
+      <div className="liquid-glass bg-blue-500/10 border border-blue-500/20 p-6 rounded-3xl shadow-xl mt-4">
         <div className="flex justify-between items-center mb-4 border-b border-blue-500/20 pb-4">
           <h3 className="text-blue-300 font-bold flex items-center gap-2">
             <FileText className="w-5 h-5" /> Printable Worksheet
@@ -287,7 +287,7 @@ export function ArtifactRenderer({ content, artifactType, downloadUrl }: Artifac
     try {
       const data = JSON.parse(researchMatch[1].trim());
       return (
-        <div className="bg-amber-500/10 border border-amber-500/20 p-6 rounded-3xl shadow-xl mt-4">
+        <div className="liquid-glass bg-amber-500/10 border border-amber-500/20 p-6 rounded-3xl shadow-xl mt-4">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-amber-300 font-bold text-xl">Update & Research: {data.title}</h3>
             {downloadUrl && (
@@ -320,7 +320,7 @@ export function ArtifactRenderer({ content, artifactType, downloadUrl }: Artifac
       const data = JSON.parse(resourceMatch[1].trim());
       const [tab, setTab] = useState<"news" | "papers" | "docs">("news");
       return (
-        <div className="bg-cyan-500/10 border border-cyan-500/20 p-6 rounded-3xl shadow-xl mt-4">
+        <div className="liquid-glass bg-cyan-500/10 border border-cyan-500/20 p-6 rounded-3xl shadow-xl mt-4">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-cyan-300 font-bold text-xl">Resource Card</h3>
             {downloadUrl && (
@@ -338,7 +338,7 @@ export function ArtifactRenderer({ content, artifactType, downloadUrl }: Artifac
           <div className="space-y-3 mb-6 max-h-60 overflow-y-auto pr-1">
             {(data[tab] || []).map((item: any, i: number) => (
               <a key={i} href={item.url} target="_blank"
-                className="block bg-black/20 rounded-xl p-3 hover:bg-black/40 transition-colors">
+                className="liquid-glass liquid-glass-sm block bg-black/20 rounded-xl p-3 hover:bg-black/40 transition-colors">
                 <p className="text-sm text-slate-200 font-medium">{item.title}</p>
                 <p className="text-xs text-slate-400 truncate mt-1">{item.url}</p>
               </a>
@@ -380,11 +380,11 @@ export function ArtifactRenderer({ content, artifactType, downloadUrl }: Artifac
     try {
       const data = JSON.parse(diagramMatch[1].trim());
       return (
-        <div className="bg-pink-500/10 border border-pink-500/20 p-6 rounded-3xl shadow-xl mt-4">
+        <div className="liquid-glass bg-pink-500/10 border border-pink-500/20 p-6 rounded-3xl shadow-xl mt-4">
           <h3 className="text-pink-300 font-bold mb-4 text-xl">Diagram Gallery</h3>
           <div className="space-y-6">
             {data.images?.map((img: any, i: number) => (
-              <div key={i} className="bg-black/30 rounded-2xl overflow-hidden border border-white/5">
+              <div key={i} className="liquid-glass liquid-glass-sm bg-black/30 rounded-2xl overflow-hidden border border-white/5">
                 <img src={img.url} alt={img.title} className="w-full max-h-64 object-contain bg-slate-950 p-2" />
                 <div className="p-4">
                   <a href={img.source_url} target="_blank" className="text-xs text-pink-400 hover:underline block mb-2 font-mono truncate">
@@ -404,7 +404,7 @@ export function ArtifactRenderer({ content, artifactType, downloadUrl }: Artifac
     try {
       const data = JSON.parse(flashcardsMatch[1].trim());
       return (
-        <div className="bg-fuchsia-500/10 border border-fuchsia-500/20 p-6 rounded-3xl shadow-xl mt-4">
+        <div className="liquid-glass bg-fuchsia-500/10 border border-fuchsia-500/20 p-6 rounded-3xl shadow-xl mt-4">
           <h3 className="text-fuchsia-300 font-bold mb-6 text-xl text-center uppercase tracking-wide flex items-center justify-center gap-3">
             Flashcards: {data.title}
             {downloadUrl && (

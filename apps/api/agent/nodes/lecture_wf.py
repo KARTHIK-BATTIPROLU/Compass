@@ -1,5 +1,5 @@
 from agent.state import AppState
-from langchain_google_genai import ChatGoogleGenerativeAI
+from agent.llm import get_llm
 from langchain_core.messages import SystemMessage, AIMessage
 from langfuse import observe
 import uuid
@@ -12,7 +12,7 @@ async def lecture_wf_node(state: AppState):
     Generates: opening hook → segments (objective + example + timing) → close/recap.
     Sets state["lecture_flow"] to a structured dict so was_wf gate can read it.
     """
-    llm = ChatGoogleGenerativeAI(model="gemini-1.5-pro", temperature=0.2)
+    llm = get_llm(temperature=0.2)
 
     prompt = state.get("prompt", "")
     curriculum_ctx = state.get("curriculum_ctx", [])

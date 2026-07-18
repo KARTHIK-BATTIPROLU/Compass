@@ -19,9 +19,9 @@ export function FloatingChips({ chips, activeChips, onToggle }: FloatingChipsPro
             onClick={() => onToggle(chip)}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            className={`px-4 py-2 rounded-full whitespace-nowrap text-sm font-medium transition-colors shadow-lg backdrop-blur-md border ${
-              isActive 
-                ? 'bg-indigo-600/90 text-white border-indigo-400/50 shadow-[0_0_15px_rgba(99,102,241,0.5)]' 
+            className={`liquid-glass liquid-glass-sm px-4 py-2 rounded-full whitespace-nowrap text-sm font-medium transition-colors shadow-lg border ${
+              isActive
+                ? 'bg-indigo-600/90 text-white border-indigo-400/50 shadow-[0_0_15px_rgba(99,102,241,0.5)]'
                 : 'bg-slate-800/60 text-slate-300 border-white/10 hover:bg-slate-700/80'
             }`}
           >

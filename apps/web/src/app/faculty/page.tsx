@@ -4,7 +4,7 @@ export default function FacultyDashboard() {
   return (
     <main className="min-h-screen flex items-center justify-center bg-slate-950 p-4">
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-indigo-900 via-slate-950 to-slate-950 opacity-80" />
-      <div className="relative z-10 bg-slate-900/40 backdrop-blur-xl rounded-3xl p-8 border border-white/10 shadow-2xl max-w-md w-full">
+      <div className="liquid-glass liquid-glass-lg relative z-10 bg-slate-900/40 rounded-3xl p-8 border border-white/10 shadow-2xl max-w-md w-full">
         <h1 className="text-3xl font-bold text-white mb-2 text-center">Select Class</h1>
         <p className="text-slate-400 mb-8 text-center">Which class are you preparing for today?</p>
         

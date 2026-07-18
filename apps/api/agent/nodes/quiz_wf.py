@@ -1,5 +1,5 @@
 from agent.state import AppState
-from langchain_google_genai import ChatGoogleGenerativeAI
+from agent.llm import get_llm
 from langchain_core.messages import SystemMessage
 from langfuse import observe
 import os
@@ -22,7 +22,7 @@ def get_supabase():
 
 @observe()
 async def quiz_wf_node(state: AppState):
-    llm = ChatGoogleGenerativeAI(model="gemini-1.5-pro", temperature=0.2)
+    llm = get_llm(temperature=0.2)
     user = state.get("user", {})
     role = user.get("role", "learner")
     class_level = state.get("class_level", user.get("standard", "General"))

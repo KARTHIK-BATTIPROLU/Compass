@@ -26,7 +26,7 @@ function MasteryRing({ topic, mastery }: MasteryRingProps) {
     <motion.div
       initial={{ opacity: 0, scale: 0.8 }}
       animate={{ opacity: 1, scale: 1 }}
-      className="flex flex-col items-center gap-2 p-4 bg-slate-800/40 border border-white/10 rounded-2xl backdrop-blur-md"
+      className="liquid-glass liquid-glass-sm flex flex-col items-center gap-2 p-4 bg-slate-800/40 border border-white/10 rounded-2xl"
     >
       <svg width="72" height="72" className="-rotate-90">
         <circle cx="36" cy="36" r={radius} fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="6" />
@@ -96,7 +96,7 @@ export default function MyProgressPage() {
             <div className="w-8 h-8 rounded-full border-2 border-violet-400 border-t-transparent animate-spin" />
           </div>
         ) : weakness.length === 0 ? (
-          <div className="bg-slate-800/40 border border-white/10 rounded-3xl p-12 text-center">
+          <div className="liquid-glass bg-slate-800/40 border border-white/10 rounded-3xl p-12 text-center">
             <span className="text-5xl mb-4 block">📚</span>
             <h2 className="text-xl font-semibold text-slate-200 mb-2">No Progress Data Yet</h2>
             <p className="text-slate-400 text-sm">
@@ -117,7 +117,7 @@ export default function MyProgressPage() {
                     <MasteryRing key={i} topic={w.topic} mastery={w.mastery} />
                   ))}
                 </div>
-                <div className="mt-4 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl">
+                <div className="liquid-glass liquid-glass-sm mt-4 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl">
                   <p className="text-sm text-red-300">
                     💡 <strong>Tip:</strong> Ask about{" "}
                     <span className="font-semibold">{weak[0]?.topic}</span> in your next chat session to strengthen your understanding.

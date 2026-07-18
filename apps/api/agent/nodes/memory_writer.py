@@ -76,10 +76,10 @@ def get_qdrant():
 async def _extract_topics(prompt: str, response_text: str) -> list[str]:
     """Use Gemini to extract 1-5 topic names from the turn. Returns [] on failure."""
     try:
-        from langchain_google_genai import ChatGoogleGenerativeAI
+        from agent.llm import get_llm
         from langchain_core.messages import SystemMessage, HumanMessage
 
-        llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0.0)
+        llm = get_llm(temperature=0.0)
         extraction_prompt = f"""Extract 1-5 specific academic topic names from this conversation turn.
 Return ONLY a JSON array of strings, nothing else. Example: ["Photosynthesis", "Chlorophyll"]
 

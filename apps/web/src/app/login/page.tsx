@@ -60,7 +60,7 @@ function LoginForm() {
     <motion.div 
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
-      className="bg-slate-900/40 backdrop-blur-xl rounded-3xl p-8 max-w-md w-full border border-white/10 shadow-2xl text-center"
+      className="liquid-glass liquid-glass-lg bg-slate-900/40 rounded-3xl p-8 max-w-md w-full border border-white/10 shadow-2xl text-center"
     >
       <h1 className="text-3xl font-bold text-white mb-2">Welcome Back</h1>
       <p className="text-slate-400 mb-6">Sign in to your {role === 'faculty' ? 'Faculty' : 'Learner'} account</p>
