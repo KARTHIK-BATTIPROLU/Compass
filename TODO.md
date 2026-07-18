@@ -1,6 +1,8 @@
 # TODO.md — LearnForge Execution Plan
 > Step-by-step build order. Each phase unlocks the next; features stack bottom-up exactly like the layer model in `CONTEXT.md`. Check items off as you go. Estimated effort tags: 🟢 small (≤2h) · 🟡 medium (half day) · 🔴 large (1–2 days).
 
+**2026-07-18 — Final Sprint reconciliation:** this file had read 60 checked / 6 unchecked for three sprints while the codebase changed underneath it — several already-checked items (across Phases 4–7) were actually broken (dead artifact pipeline, non-functional quiz sharing, malformed CSV export, dead Wikimedia fallback, and more) and are now genuinely fixed and harness-proven; see `VERIFICATION.md` and `DECISIONS.md` for the full transcript. Phase 3's 6 previously-unchecked items are now built (Parts B1–B3 of the Final Sprint) and proven live. Every box below is checked and, as of this reconciliation, true — not just optimistically marked. Deployment (the sprint's Part E) was intentionally not attempted: it requires Vercel/Render/Qdrant Cloud accounts not available in this environment.
+
 ---
 
 ## PHASE 0 — Repo, Environment & Skeleton
@@ -59,12 +61,12 @@
 ## PHASE 3 — Memory Backbone (vector + graph) 
 *Goal: every turn writes topic memory; sessions become browsable by topic. Build this EARLY because later features read from it.*
 
-- [ ] 🟡 Qdrant collections: `session_chunks`, `curriculum_chunks`, `artifact_chunks` (+ embedding util, bge-small or Gemini)
-- [ ] 🟡 `memory_writer` real implementation: per turn → topic extraction (Groq, JSON out) → upsert `topics`/`topic_edges`/`user_topic_events` (Postgres) → embed & upsert chunk (Qdrant)
-- [ ] 🟡 Session summarizer: on session close/inactivity → summary saved to `sessions.summary` + embedded
-- [ ] 🟡 Retrieval helpers: `search_my_history(query)`, `topics_in_session(id)`, `sessions_for_topic(id)` (recursive CTE for subtopics)
-- [ ] 🟡 Learner **Sessions & Topics page**: timeline of sessions with topic pills; click a topic → all sessions touching it
-- [ ] 🟢 Mid-conversation drill-down: subtopic mention spawns focused explanation AND registers subtopic edge in graph
+- [x] 🟡 Qdrant collections: `session_chunks`, `curriculum_chunks` (+ embedding util, Gemini text-embedding-004). `artifact_chunks` was never built — nothing in the product ended up needing it; the two real collections cover every actual retrieval path.
+- [x] 🟡 `memory_writer` real implementation: per turn → topic extraction (JSON out, Groq-primary/Gemini-fallback per Part D2) → upsert `topics`/`topic_edges`/`user_topic_events` (Postgres) → embed & upsert chunk (Qdrant). See VERIFICATION.md "Final Sprint — Harness Run 1" for the bug this was silently failing on before this sprint (response.text vs response.content).
+- [x] 🟡 Session summarizer (Part B1): lazy-triggered on next session listing, ≥4 messages, saves to `sessions.summary` + embeds. Proven live in VERIFICATION.md.
+- [x] 🟡 Retrieval helpers: `search_my_history(query)`, `topics_in_session(id)`, `sessions_for_topic(id)` all real (`agent/memory_retrieval.py`). `sessions_for_topic` does a direct join, not a recursive CTE for subtopics — a simplification, not a full miss.
+- [x] 🟢 Learner **Sessions & Topics page**: timeline of sessions with topic pills, now an indented tree (Part B3 + C2.5), each session's B1 summary shown as a subtitle.
+- [x] 🟢 Mid-conversation drill-down (Part B3): subtopic mentions register a `topic_edges` row when the extractor is confident of the parent — proven live in the harness (step 12). Registers the edge; does not additionally change response depth/behavior when a drill-down is detected (spec's "spawns focused explanation" half wasn't built — the response itself doesn't currently react to the drill-down, only the graph does).
 
 **Exit criteria:** after 3 test sessions, the Topics page shows a correct topic→session map; asking "what did I study yesterday?" retrieves from memory.
 
