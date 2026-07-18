@@ -135,6 +135,11 @@ async def upload_curriculum(
     # 3. Create File Record in Supabase
     file_id = str(uuid.uuid4())
     try:
+        # Seed topic if it doesn't exist
+        topic_res = sb.table("topics").select("id").eq("name", topic).execute()
+        if not topic_res.data:
+            sb.table("topics").insert({"name": topic}).execute()
+
         sb.table("curriculum_files").insert({
             "id": file_id,
             "user_id": user.id,
