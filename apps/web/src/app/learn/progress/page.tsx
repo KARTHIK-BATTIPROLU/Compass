@@ -97,7 +97,7 @@ export default function MyProgressPage() {
   const good = weakness.filter(w => w.mastery >= 0.5);
 
   return (
-    <div className="min-h-screen platform-mesh platform-mesh-learner text-white p-6 md:p-10">
+    <div className="min-h-screen platform-mesh platform-mesh-learner text-white pt-20 px-6 pb-6 md:p-10">
       <div className="relative z-10 max-w-4xl mx-auto space-y-10">
         <div>
           <h1 className="font-display text-3xl font-semibold text-slate-100">My Progress</h1>

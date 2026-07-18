@@ -108,7 +108,7 @@ export default function CurriculumUploadPage() {
   };
 
   return (
-    <div className="min-h-screen platform-mesh platform-mesh-faculty text-white p-6 md:p-10">
+    <div className="min-h-screen platform-mesh platform-mesh-faculty text-white pt-20 px-6 pb-6 md:p-10">
       <div className="relative z-10 max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-10">
 
         {/* Upload Form */}
