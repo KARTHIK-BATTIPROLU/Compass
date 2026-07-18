@@ -68,27 +68,37 @@ CURRICULUM:
         quiz_data = {"title": "Error generating quiz", "questions": []}
 
     artifacts = state.get("artifacts", [])
-    
+    art_id = str(uuid.uuid4())
+    session_id = state.get("session_id")
+
     if role == "faculty":
         token = str(uuid.uuid4())
+        artifact_content = f'<artifact type="quiz_link" token="{token}">{json.dumps(quiz_data)}</artifact>'
         try:
             sb = get_supabase()
             if sb:
+                # quizzes.artifact_id is a real FK to artifacts.id. composer_node
+                # persists artifacts too, but only after this node returns, so we
+                # create the row here first or the insert below violates the FK.
+                sb.table("artifacts").upsert({
+                    "id": art_id,
+                    "session_id": session_id,
+                    "type": "quiz",
+                    "content_md": artifact_content,
+                }, on_conflict="id").execute()
                 sb.table("quizzes").insert({
-                "artifact_id": token,
-                "share_token": token,
-                "questions": quiz_data,
-                "open": True
-            }).execute()
+                    "artifact_id": art_id,
+                    "share_token": token,
+                    "questions": quiz_data,
+                    "open": True
+                }).execute()
         except Exception as e:
             print("Failed to save quiz:", e)
-            
-        artifact_content = f'<artifact type="quiz_link" token="{token}">{json.dumps(quiz_data)}</artifact>'
     else:
         artifact_content = f'<artifact type="learner_quiz">{json.dumps(quiz_data)}</artifact>'
-        
+
     artifacts.append({
-        "id": str(uuid.uuid4()),
+        "id": art_id,
         "type": "quiz",
         "content": artifact_content,
         "created_at": "now"

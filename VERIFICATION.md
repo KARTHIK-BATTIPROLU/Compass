@@ -39,9 +39,45 @@ PASS: Harness completed successfully!
 
 (Also fixed: `prove_sprint2.py` crashed on its own `print()` of the CSV preview because the Windows console is cp1252 and can't encode `₂`/`₆`/`→`. Added `sys.stdout.reconfigure(encoding="utf-8", errors="replace")` — a harness-only fix, not a product bug.)
 
+### Harness extended with 4 more checks (Wikimedia, Semantic Scholar, Anki, quiz-results 403)
+
+Extending the harness immediately surfaced three more real bugs:
+
+5. **Wikimedia image search always 403'd.** `en.wikipedia.org/w/api.php` now enforces Wikimedia's robot policy and rejects any request with no `User-Agent` header — every call returned a plain-text 403, which then crashed `res.json()`. This silently killed the "Wikimedia fallback" for every diagram request; the pipeline was probably always falling through to DuckDuckGo images (or nothing). Fixed by adding a descriptive `User-Agent` to `agent/tools/images.py`.
+6. **Semantic Scholar's unauthenticated endpoint is currently rate-limited** (shared global quota, not specific to this app/key — confirmed via a raw probe returning 429 with `"apply for a key for higher rate limits"`). Added a bounded retry with `Retry-After` honoring to `search_semantic_scholar`. The harness now probes first: if the API is genuinely down/throttled, it verifies the wrapper degrades to `[]` without crashing (WARN, not FAIL); only a *silent* empty result while the API is healthy fails the harness. This is the honest signal — a free third-party quota being tight right now is not a bug in this codebase.
+7. **Quiz sharing was completely non-functional — `quizzes.artifact_id` violated its own FK on every insert.** `quiz_wf_node` set `artifact_id: token` where `token` was the public share-token UUID, not a real `artifacts.id`. Confirmed empirically: `POST /rest/v1/quizzes` with a fabricated `artifact_id` returns `409 / 23503 foreign key violation`. The insert was wrapped in a bare `try/except: print(...)`, so **every single quiz ever "created" via the faculty Quiz chip silently failed to persist** — the share link shown in the UI was dead on arrival (`GET /api/quiz/{token}` would 404). Fixed by having `quiz_wf_node` create the `artifacts` row itself first (satisfying the FK) before inserting the `quizzes` row, using a real shared `art_id` distinct from the public `share_token`. `composer.py`'s artifact persistence changed from `.insert()` to `.upsert()` so its now-redundant later write is idempotent instead of a swallowed conflict error.
+8. **`user_owns_session` granted blanket access to any faculty account for any session, faculty or learner.** Found while building the "quiz-results ownership 403" check — the helper had a second branch: `if user_res.data.get("role") == "faculty": return True`, with no check that the *specific* faculty user was the *specific* session's owner. This gated `/api/chat/stream`, `/api/quiz/{token}/results`, and `/api/artifacts/{id}/export` — meaning any faculty account could read or write into **any other user's session**, faculty or learner. Removed the blanket bypass; ownership is now strictly `session.user_id == user_id`.
+
+### Transcript (full extended harness, final clean run)
+
+```
+1. Creating test user to get JWT...
+2. Creating mock session for user 47840e5b-2b85-4807-8c3f-38a659a13ef2...
+3. Querying /api/chat/stream for session 1a6fd860-003a-4040-bc6d-d03a14060075...
+   Response received...
+4. Testing download_url: /api/artifacts/907e3648-d760-4412-9b25-9acfb4f12b42/export?format=csv
+
+--- CSV Output Preview ---
+Front,Back
+What is the balanced chemical equation for photosynthesis?,6CO₂ + 6H₂O + light energy → C₆H₁₂O₆ + 6O₂
+"Where do the light-dependent reactions occur, and what are their main products?","Th
+--------------------------
+
+5. Testing Wikimedia image search...
+   OK: 3 image(s), first='Biological illustration'
+6. Testing Semantic Scholar search...
+   WARN: Semantic Scholar is rate-limiting unauthenticated requests right now (shared global quota — outside this app's control). Verifying the wrapper degrades gracefully instead of crashing...
+   OK: search_semantic_scholar degrades to [] cleanly under rate limiting (no crash).
+7. Testing Anki .apkg download...
+   OK: .apkg downloaded, 53466 bytes
+8. Testing quiz-results ownership enforcement...
+   OK: quiz persisted, share link resolves, non-owner correctly received 403 on results
+PASS: Harness completed successfully!
+```
+
 ### Still open for the rest of Part A
-- Harness does not yet cover: Wikimedia image fallback, Semantic Scholar presence, Anki `.apkg` download, quiz-results ownership 403. To be added next.
-- RLS (A2) and quiz throttling (A3) not yet started.
+- RLS (A2) and quiz submit-path throttling (A3) not yet started.
+- Known, not yet fixed (queued into A2's migration since it's already touching `schema.sql`): the `artifacts.type` CHECK constraint only allows `('flow','script','slides','worksheet','quiz','flashcards','resource_brief')`, but the code emits `resource_card`, `research_brief`, and `diagram_gallery` — none of which match. This means diagrams/research-brief/resource-card artifacts have never actually persisted to Postgres (silently swallowed by composer's try/except), so their export/download endpoints 404 and they vanish on reload.
 
 ---
 

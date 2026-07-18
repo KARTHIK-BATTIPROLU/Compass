@@ -148,5 +148,144 @@ print("\n--- CSV Output Preview ---")
 print(csv_content[:200])
 print("--------------------------\n")
 
+# ── 5. Wikimedia image fallback ──────────────────────────────────────────────
+print("5. Testing Wikimedia image search...")
+import asyncio
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "apps", "api"))
+from agent.tools.images import search_wikimedia_images
+
+wiki_results = asyncio.run(search_wikimedia_images("human heart anatomy", max_results=3))
+if not wiki_results:
+    print("FAIL: Wikimedia image search returned no results.")
+    sys.exit(1)
+if not wiki_results[0].get("url") or not wiki_results[0].get("license"):
+    print("FAIL: Wikimedia result missing url/license fields.")
+    sys.exit(1)
+print(f"   OK: {len(wiki_results)} image(s), first={wiki_results[0]['title']!r}")
+
+# ── 6. Semantic Scholar ───────────────────────────────────────────────────────
+print("6. Testing Semantic Scholar search...")
+from agent.tools.search import search_semantic_scholar
+
+# The unauthenticated endpoint shares one global rate-limit pool across all
+# callers, so a 429 here reflects third-party load, not our code. Probe first
+# so a real rate limit degrades gracefully (WARN) instead of masquerading as
+# our bug (FAIL) — but any other failure mode (bad response shape, exception,
+# a *quiet* empty result when the API is actually healthy) still fails hard.
+probe = httpx.get(
+    "https://api.semanticscholar.org/graph/v1/paper/search",
+    params={"query": "test", "limit": 1, "fields": "title"},
+    timeout=10.0,
+)
+if probe.status_code == 429:
+    print("   WARN: Semantic Scholar is rate-limiting unauthenticated requests right now "
+          "(shared global quota — outside this app's control). Verifying the wrapper "
+          "degrades gracefully instead of crashing...")
+    degraded = asyncio.run(search_semantic_scholar("test query", limit=1))
+    if degraded != []:
+        print(f"FAIL: Expected [] on persistent rate limit, got: {degraded}")
+        sys.exit(1)
+    print("   OK: search_semantic_scholar degrades to [] cleanly under rate limiting (no crash).")
+else:
+    scholar_results = asyncio.run(search_semantic_scholar("transformer neural network architecture", limit=3))
+    if not scholar_results:
+        print("FAIL: Semantic Scholar search returned no results (and the API is not rate-limited).")
+        sys.exit(1)
+    if not scholar_results[0].get("title"):
+        print("FAIL: Semantic Scholar result missing title field.")
+        sys.exit(1)
+    print(f"   OK: {len(scholar_results)} paper(s), first={scholar_results[0]['title']!r}")
+
+# ── 7. Anki .apkg download (embedded in the flashcards artifact from step 3) ──
+print("7. Testing Anki .apkg download...")
+import re
+
+anki_match = re.search(r'"download_url":\s*"(/api/download/anki/[^"]+)"', flashcard_art.get("content", ""))
+if not anki_match:
+    print("FAIL: No embedded Anki download_url found in flashcards artifact content.")
+    sys.exit(1)
+anki_res = httpx.get(f"{API_URL}{anki_match.group(1)}", headers={"Authorization": f"Bearer {access_token}"})
+if anki_res.status_code >= 400:
+    print(f"FAIL: Anki download failed - HTTP {anki_res.status_code}")
+    sys.exit(1)
+if anki_res.content[:2] != b"PK":  # .apkg is a zip container
+    print("FAIL: Anki .apkg response does not look like a valid zip file.")
+    sys.exit(1)
+print(f"   OK: .apkg downloaded, {len(anki_res.content)} bytes")
+
+# ── 8. Quiz-results ownership enforcement (403 for non-owners) ───────────────
+print("8. Testing quiz-results ownership enforcement...")
+teacher_email = f"teacher_{uuid.uuid4().hex[:8]}@demo.com"
+sb_admin.auth.admin.create_user({"email": teacher_email, "password": password, "email_confirm": True})
+teacher_auth = sb_anon.auth.sign_in_with_password({"email": teacher_email, "password": password})
+teacher_token = teacher_auth.session.access_token
+teacher_id = teacher_auth.user.id
+
+httpx.post(f"{SUPABASE_URL}/rest/v1/users", headers=db_headers, json={
+    "id": teacher_id, "email": teacher_email, "role": "faculty", "name": "Teacher"
+})
+teacher_session_res = httpx.post(db_url, headers=db_headers, json={
+    "user_id": teacher_id, "title": "Teacher Quiz Session", "class_level": "Grade 10"
+})
+if teacher_session_res.status_code >= 400:
+    print(f"FAIL: Teacher session creation failed - {teacher_session_res.text}")
+    sys.exit(1)
+teacher_session_id = teacher_session_res.json()[0]["id"]
+
+quiz_payload = {"session_id": teacher_session_id, "prompt": "Quiz me on the water cycle", "modes": ["quiz"]}
+quiz_r = httpx.post(
+    stream_url,
+    headers={"Authorization": f"Bearer {teacher_token}", "Content-Type": "application/json"},
+    json=quiz_payload,
+    timeout=120.0,
+)
+quiz_artifacts = None
+for line in quiz_r.text.splitlines():
+    if line.startswith("data: "):
+        data_str = line[6:]
+        if data_str == "[DONE]":
+            break
+        try:
+            event = json.loads(data_str)
+            if event.get("type") == "artifacts":
+                quiz_artifacts = event.get("data", [])
+        except Exception:
+            pass
+
+if not quiz_artifacts:
+    print("FAIL: No quiz artifact emitted. Raw response:")
+    print(quiz_r.text)
+    sys.exit(1)
+
+quiz_art = next((a for a in quiz_artifacts if a.get("type") == "quiz"), None)
+if not quiz_art:
+    print("FAIL: quiz artifact type not found.")
+    sys.exit(1)
+
+token_match = re.search(r'token="([^"]+)"', quiz_art.get("content", ""))
+if not token_match:
+    print("FAIL: No share token found in quiz artifact content.")
+    sys.exit(1)
+share_token = token_match.group(1)
+
+# Confirm the quiz actually persisted (this is the FK bug's regression check —
+# quiz_wf used to insert artifact_id=<share token> instead of a real artifacts.id,
+# which violated the FK and silently dropped the row every time).
+get_res = httpx.get(f"{API_URL}/api/quiz/{share_token}")
+if get_res.status_code != 200:
+    print(f"FAIL: Quiz was not persisted — GET /api/quiz/{{token}} returned {get_res.status_code}. "
+          f"The share link is dead.")
+    sys.exit(1)
+
+# The ORIGINAL test user (step 1) does not own the teacher's session — must get 403.
+forbidden_res = httpx.get(
+    f"{API_URL}/api/quiz/{share_token}/results",
+    headers={"Authorization": f"Bearer {access_token}"},
+)
+if forbidden_res.status_code != 403:
+    print(f"FAIL: Expected 403 for non-owner quiz-results access, got {forbidden_res.status_code} — {forbidden_res.text}")
+    sys.exit(1)
+print("   OK: quiz persisted, share link resolves, non-owner correctly received 403 on results")
+
 print("PASS: Harness completed successfully!")
 sys.exit(0)

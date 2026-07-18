@@ -56,7 +56,9 @@ async def search_arxiv(query: str) -> str:
         return "No arXiv results found."
 
 async def search_semantic_scholar(query: str, limit: int = 3) -> list:
-    """Search Semantic Scholar via REST API."""
+    """Search Semantic Scholar via REST API. Retries once on the (common,
+    shared-quota) 429 the unauthenticated endpoint returns under load."""
+    import asyncio
     import httpx
     url = "https://api.semanticscholar.org/graph/v1/paper/search"
     params = {
@@ -65,11 +67,19 @@ async def search_semantic_scholar(query: str, limit: int = 3) -> list:
         "fields": "title,url,authors,year,abstract"
     }
     try:
-        async with httpx.AsyncClient(timeout=5.0) as client:
-            res = await client.get(url, params=params)
-            res.raise_for_status()
-            data = res.json()
-            return data.get("data", [])
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            for attempt in range(2):
+                res = await client.get(url, params=params)
+                if res.status_code == 429:
+                    if attempt == 0:
+                        wait_s = float(res.headers.get("retry-after", 5))
+                        await asyncio.sleep(min(wait_s, 15))
+                        continue
+                    logger.warning(f"Semantic Scholar rate-limited for '{query}' after retry")
+                    return []
+                res.raise_for_status()
+                data = res.json()
+                return data.get("data", [])
     except Exception as e:
         logger.warning(f"Semantic Scholar search failed for '{query}': {e}")
         return []

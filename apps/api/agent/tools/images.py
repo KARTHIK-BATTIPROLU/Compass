@@ -20,8 +20,12 @@ async def search_wikimedia_images(query: str, max_results: int = 3) -> list:
     
     results = []
     try:
-        async with httpx.AsyncClient(timeout=5.0) as client:
+        # Wikimedia's robot policy rejects requests with no User-Agent (403,
+        # plain text body) — https://w.wiki/4wJS.
+        headers = {"User-Agent": "LearnForge/1.0 (https://learnforge.app; edtech curriculum tool)"}
+        async with httpx.AsyncClient(timeout=5.0, headers=headers) as client:
             res = await client.get(url, params=params)
+            res.raise_for_status()
             data = res.json()
             
             pages = data.get("query", {}).get("pages", {})

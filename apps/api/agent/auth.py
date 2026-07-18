@@ -39,22 +39,13 @@ async def get_current_user(request: Request, user=Depends(verify_user)):
     return user
 
 def user_owns_session(user_id: str, session_id: str) -> bool:
-    """Checks if the given user owns the session or is a teacher with access."""
+    """Checks if the given user is the direct owner of the session."""
     sb = get_supabase()
     if not sb:
         return False
     try:
-        # Check if the user is the direct owner
         res = sb.table("sessions").select("user_id").eq("id", session_id).single().execute()
-        if res.data and res.data.get("user_id") == user_id:
-            return True
-        
-        # Check if user is a teacher (faculty role)
-        user_res = sb.table("users").select("role").eq("id", user_id).single().execute()
-        if user_res.data and user_res.data.get("role") == "faculty":
-            return True
-            
-        return False
+        return bool(res.data and res.data.get("user_id") == user_id)
     except Exception as e:
         logger.error(f"Error checking session ownership: {e}")
         return False

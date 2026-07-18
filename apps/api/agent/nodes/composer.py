@@ -45,16 +45,18 @@ async def composer_node(state: AppState) -> dict:
             "download_url": download_url
         }
         
-        # Persist to Supabase non-fatally
+        # Persist to Supabase non-fatally. upsert (not insert): some workflow
+        # nodes (e.g. quiz_wf) already persist their own artifacts row earlier
+        # in the turn to satisfy a downstream FK, so this is often an update.
         if sb and session_id:
             try:
-                sb.table("artifacts").insert({
+                sb.table("artifacts").upsert({
                     "id": art_id,
                     "session_id": session_id,
                     "type": art_type,
                     "content_md": norm_art.get("content", ""),
                     "export_urls": {"default": download_url}
-                }).execute()
+                }, on_conflict="id").execute()
             except Exception as e:
                 logger.warning(f"Failed to persist artifact {art_id}: {e}")
                 
