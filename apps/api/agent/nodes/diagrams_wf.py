@@ -69,11 +69,11 @@ IMAGES TO ANALYZE:
     response = await llm.ainvoke(messages)
     
     artifacts = state.get("artifacts", [])
-    if "<artifact type=\"diagram_gallery\">" in response.content:
+    if "<artifact type=\"diagram_gallery\">" in response.text:
         artifacts.append({
             "id": str(uuid.uuid4()),
             "type": "diagram_gallery",
-            "content": response.content,
+            "content": response.text,
             "created_at": "now"
         })
         

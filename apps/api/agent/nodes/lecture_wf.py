@@ -65,7 +65,7 @@ Generate a STRUCTURED LECTURE FLOW. Output BOTH:
 </artifact>"""
 
     response = await llm.ainvoke([SystemMessage(content=system_prompt)])
-    content = response.content
+    content = response.text
 
     # Parse the structured JSON from the response
     lecture_flow = None

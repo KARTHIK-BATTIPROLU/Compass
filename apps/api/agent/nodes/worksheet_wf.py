@@ -20,11 +20,11 @@ Inside, use markdown. Provide a "## Student Worksheet" section with questions an
     response = await llm.ainvoke(messages)
     
     artifacts = state.get("artifacts", [])
-    if "<artifact type=\"worksheet\">" in response.content:
+    if "<artifact type=\"worksheet\">" in response.text:
         artifacts.append({
             "id": str(uuid.uuid4()),
             "type": "worksheet",
-            "content": response.content,
+            "content": response.text,
             "created_at": "now"
         })
         

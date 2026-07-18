@@ -3,6 +3,48 @@
 
 ---
 
+## Final Sprint — Harness Run 1
+
+**Date:** 2026-07-18
+**Command:** `uv run uvicorn main:app --port 8002` (in `apps/api`) + `uv run python ../../prove_sprint2.py`
+
+### Blockers found and fixed en route to PASS
+
+The harness had never actually been executed before this run (per FINAL_SPRINT_MASTER_PROMPT.md §A1's own premise). Running it for the first time surfaced three real, previously-undetected bugs — not environment flukes:
+
+1. **`gemini-2.0-flash` has zero free-tier quota on this project.** Every call 429'd with `"limit: 0, model: gemini-2.0-flash"` regardless of key. Confirmed via direct probe against `GOOGLE_API_KEY` that `gemini-flash-latest` on the *same key* responds in ~2s. `agent/llm.py` model name switched to `gemini-flash-latest`.
+2. **`max_retries=20` (added in commit 9ee56b1c "resilient 3-layer LLM factory") could hang ~15 minutes per key.** Google's SDK backs off up to 60s/attempt; with 3 fallback keys chained, a fully-rate-limited turn could stall ~45 min instead of failing fast. Reduced to `max_retries=2` + `timeout=20` per key in `agent/llm.py` — a rate-limited key now fails over in seconds instead of stalling the whole chat turn.
+3. **Every artifact-producing node silently produced zero artifacts.** The langchain-google-genai version in use returns `AIMessage.content` as a list of content blocks (`[{"type": "text", "text": ..., "extras": {...}}]`), not a plain string. Every node's `"<artifact...>" in response.content` check was therefore always `False` — no exception, no log, just silently empty `artifacts`. Confirmed by direct stream probe: raw tokens contained a fully-formed `<artifact type="flashcards">...</artifact>` block, but no `{"type": "artifacts"}` SSE event was ever emitted. Fixed by switching all artifact-parsing reads from `response.content` to `response.text` (langchain_core's built-in block-aware text accessor) in: `flashcards_wf.py`, `worksheet_wf.py`, `quiz_wf.py`, `was_wf.py`, `diagrams_wf.py`, `research_wf.py`, `resource_wf.py`, `lecture_wf.py`, `memory_writer.py`. This also fixed a latent crash in `flashcards_wf.py` (`response.content.replace(...)` would `AttributeError` on a list the moment the `if` branch was ever reachable).
+4. **CSV export was structurally broken.** `routers/export.py::export_csv` parsed content by naively splitting every line on `:` — fine for a hypothetical "Term: definition" markdown format, useless for the JSON-in-`<artifact>` format flashcards actually use (a single-line JSON blob has dozens of colons, so it produced one garbage row). Rewrote to extract the JSON from inside the `<artifact>` tag and emit one clean `Front,Back` row per card, falling back to the old line-parsing heuristic for non-JSON content.
+
+None of these were config/environment issues — all four are committed, reproducible bugs now fixed in the tree.
+
+### Transcript (final clean run)
+
+```
+1. Creating test user to get JWT...
+2. Creating mock session for user 92b0d356-4850-4be6-a32f-1d82b9923faa...
+3. Querying /api/chat/stream for session 75c2112e-a9d7-4711-9f71-f400719cec36...
+   Response received...
+4. Testing download_url: /api/artifacts/0b13091a-e881-479e-ade6-292e4e231cfb/export?format=csv
+
+--- CSV Output Preview ---
+Front,Back
+What is the balanced chemical equation for photosynthesis?,6CO₂ + 6H₂O + light energy → C₆H₁₂O₆ + 6O₂
+"What are the two main stages of photosynthesis, and where does each occur within the
+--------------------------
+
+PASS: Harness completed successfully!
+```
+
+(Also fixed: `prove_sprint2.py` crashed on its own `print()` of the CSV preview because the Windows console is cp1252 and can't encode `₂`/`₆`/`→`. Added `sys.stdout.reconfigure(encoding="utf-8", errors="replace")` — a harness-only fix, not a product bug.)
+
+### Still open for the rest of Part A
+- Harness does not yet cover: Wikimedia image fallback, Semantic Scholar presence, Anki `.apkg` download, quiz-results ownership 403. To be added next.
+- RLS (A2) and quiz throttling (A3) not yet started.
+
+---
+
 ## Phase 1 — Audit & Stabilize
 
 **Date:** 2026-07-18

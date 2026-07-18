@@ -57,7 +57,7 @@ CURRICULUM:
     
     quiz_data = {}
     try:
-        raw = response.content
+        raw = response.text
         if "```json" in raw:
             raw = raw.split("```json")[1].split("```")[0]
         elif "```" in raw:

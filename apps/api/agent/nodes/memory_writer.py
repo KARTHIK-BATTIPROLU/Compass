@@ -87,7 +87,7 @@ User prompt: {prompt[:500]}
 Assistant response (first 500 chars): {response_text[:500]}"""
 
         result = await llm.ainvoke([HumanMessage(content=extraction_prompt)])
-        text = result.content.strip()
+        text = result.text.strip()
         # Strip markdown code block if present
         if "```" in text:
             text = text.split("```")[1].replace("json", "").strip()
@@ -178,10 +178,10 @@ async def memory_writer_node(state: AppState) -> dict:
     ai_msg = ""
     for msg in reversed(messages):
         if hasattr(msg, "type") and msg.type == "ai":
-            ai_msg = msg.content
+            ai_msg = msg.text if hasattr(msg, "text") else msg.content
             break
         if hasattr(msg, "role") and getattr(msg, "role", None) == "assistant":
-            ai_msg = msg.content
+            ai_msg = msg.text if hasattr(msg, "text") else msg.content
             break
 
     sb = get_supabase()

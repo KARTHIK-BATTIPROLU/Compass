@@ -1,5 +1,7 @@
 import io
 import csv
+import json
+import re
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import StreamingResponse
 from pptx import Presentation
@@ -85,18 +87,30 @@ def export_docx(md: str, title: str, is_pdf_fallback=False):
     )
 
 def export_csv(md: str, title: str):
-    # Flashcards usually have Front / Back separated by something
+    # Flashcards are stored as JSON (title/cards[]) inside an <artifact> tag.
     bio = io.StringIO()
     writer = csv.writer(bio)
     writer.writerow(["Front", "Back"])
-    
-    # Try parsing bold terms or Q: A: format
-    lines = md.split("\n")
-    for line in lines:
-        if ":" in line:
-            parts = line.split(":", 1)
-            writer.writerow([parts[0].strip(), parts[1].strip()])
-            
+
+    cards = []
+    match = re.search(r"<artifact[^>]*>(.*?)</artifact>", md, re.DOTALL)
+    raw = match.group(1).strip() if match else md.strip()
+    try:
+        data = json.loads(raw)
+        cards = data.get("cards", [])
+    except Exception:
+        cards = []
+
+    if cards:
+        for c in cards:
+            writer.writerow([c.get("front", ""), c.get("back", "")])
+    else:
+        # Fallback for non-JSON content: naive "Term: definition" line parsing
+        for line in md.split("\n"):
+            if ":" in line:
+                parts = line.split(":", 1)
+                writer.writerow([parts[0].strip(), parts[1].strip()])
+
     bio.seek(0)
     return StreamingResponse(
         iter([bio.getvalue()]),

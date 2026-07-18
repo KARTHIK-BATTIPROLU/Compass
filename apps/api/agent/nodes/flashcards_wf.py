@@ -76,21 +76,23 @@ Schema:
     response = await llm.ainvoke(messages)
     
     artifacts = state.get("artifacts", [])
-    if "<artifact type=\"flashcards\">" in response.content:
+    response_text = response.text
+    if "<artifact type=\"flashcards\">" in response_text:
         # Extract the JSON to build the APKG
-        raw = response.content.split('<artifact type="flashcards">')[1].split('</artifact>')[0]
+        raw = response_text.split('<artifact type="flashcards">')[1].split('</artifact>')[0]
         try:
             data = json.loads(raw)
             filename = create_apkg(data.get("title", "LearnForge Deck"), data.get("cards", []))
-            
+
             # Inject download link into the artifact payload
             data["download_url"] = f"/api/download/anki/{filename}"
-            
+
             new_content = f'<artifact type="flashcards">\n{json.dumps(data)}\n</artifact>'
-            response.content = response.content.replace(raw, f"\n{json.dumps(data)}\n")
+            response.content = new_content
         except Exception as e:
             logger.warning(f"Failed to generate Anki deck: {e}")
-            new_content = response.content
+            new_content = response_text
+            response.content = new_content
 
         artifacts.append({
             "id": str(uuid.uuid4()),

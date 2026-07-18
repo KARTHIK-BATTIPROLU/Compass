@@ -6,6 +6,11 @@ import uuid
 import httpx
 from dotenv import load_dotenv
 
+# Windows consoles default to cp1252, which can't encode characters like
+# subscript digits (e.g. CO2) that show up in generated content — force UTF-8
+# so a print() never crashes the harness after a successful request.
+sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+
 # Load env
 env_path = os.path.join(os.path.dirname(__file__), "apps", "api", ".env")
 load_dotenv(env_path)

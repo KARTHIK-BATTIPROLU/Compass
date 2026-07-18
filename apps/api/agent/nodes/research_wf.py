@@ -44,11 +44,11 @@ SEMANTIC SCHOLAR SOURCES:
     response = await llm.ainvoke(messages)
     
     artifacts = state.get("artifacts", [])
-    if "<artifact type=\"research_brief\">" in response.content:
+    if "<artifact type=\"research_brief\">" in response.text:
         artifacts.append({
             "id": str(uuid.uuid4()),
             "type": "research_brief",
-            "content": response.content,
+            "content": response.text,
             "created_at": "now"
         })
         

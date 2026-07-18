@@ -95,7 +95,7 @@ Generate a structured presentation as slides. Wrap your entire output in:
     artifacts.append({
         "id": slides_id,
         "type": "slides",
-        "content": slides_response.content,
+        "content": slides_response.text,
     })
 
     # ── 2. Generate Script (WEAK → AVERAGE → STRONG) ───────────────────────
@@ -140,11 +140,11 @@ Generate a TEACHING SCRIPT with EXACTLY three sections, in this order:
     artifacts.append({
         "id": script_id,
         "type": "script",
-        "content": script_response.content,
+        "content": script_response.text,
     })
 
     # Combine both responses for the message stream
-    combined = slides_response.content + "\n\n---\n\n" + script_response.content
+    combined = slides_response.text + "\n\n---\n\n" + script_response.text
     from langchain_core.messages import AIMessage
     return {
         "messages": [AIMessage(content=combined)],
