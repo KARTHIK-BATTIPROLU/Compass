@@ -39,13 +39,14 @@ interface ChatUIProps {
   role: "faculty" | "learner";
   availableChips: string[];
   initialMessages?: Message[];
+  initialInput?: string;
 }
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-export function ChatUI({ sessionId, role, availableChips, initialMessages = [] }: ChatUIProps) {
+export function ChatUI({ sessionId, role, availableChips, initialMessages = [], initialInput = "" }: ChatUIProps) {
   const [messages, setMessages] = useState<Message[]>(initialMessages);
-  const [input, setInput] = useState("");
+  const [input, setInput] = useState(initialInput);
   const [activeChips, setActiveChips] = useState<string[]>(["Detailed"]);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedArtifact, setSelectedArtifact] = useState<PanelArtifact | null>(null);

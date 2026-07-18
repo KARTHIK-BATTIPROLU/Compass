@@ -2,7 +2,7 @@ import { ChatUI } from "@/components/chat/ChatUI";
 import { SessionHeader } from "@/components/chat/SessionHeader";
 import { createClient } from "@/utils/supabase/server";
 
-export default async function LearnerChatPage({ params }: { params: { id: string } }) {
+export default async function LearnerChatPage({ params, searchParams }: { params: { id: string }; searchParams: { prefill?: string } }) {
   const supabase = await createClient();
   
   const { data: messages } = await supabase.from('messages')
@@ -28,11 +28,12 @@ export default async function LearnerChatPage({ params }: { params: { id: string
       <SessionHeader role="learner" contextInfo={{ standard: userRecord?.standard }} />
       
       <div className="relative z-10 flex-1 overflow-hidden">
-         <ChatUI 
-           sessionId={params.id} 
-           role="learner" 
-           availableChips={learnerChips} 
+         <ChatUI
+           sessionId={params.id}
+           role="learner"
+           availableChips={learnerChips}
            initialMessages={messages || []}
+           initialInput={searchParams?.prefill || ""}
          />
       </div>
     </main>

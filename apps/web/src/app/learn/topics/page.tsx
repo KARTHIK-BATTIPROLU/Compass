@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { createClient } from "@/utils/supabase/client";
 import { BookOpen, Clock, Tag } from "lucide-react";
 
@@ -38,6 +38,7 @@ export default function SessionsTopicsPage() {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Session | null>(null);
+  const reduceMotion = useReducedMotion();
 
   useEffect(() => {
     const load = async () => {
@@ -80,56 +81,55 @@ export default function SessionsTopicsPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white p-6 md:p-10">
-      <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-indigo-900/20 via-slate-950 to-slate-950 pointer-events-none" />
-
+    <div className="min-h-screen platform-mesh platform-mesh-learner text-white p-6 md:p-10">
       <div className="relative z-10 max-w-4xl mx-auto space-y-8">
-        {/* Header */}
         <div>
-          <h1 className="text-3xl font-bold text-slate-100">Sessions &amp; Topics</h1>
-          <p className="text-slate-400 mt-1">Every learning session, with the topics you covered.</p>
+          <h1 className="font-display text-3xl font-semibold text-slate-100">Sessions &amp; Topics</h1>
+          <p className="text-steel mt-1">Every learning session, with the topics you covered.</p>
         </div>
 
         {loading ? (
-          <div className="flex items-center justify-center h-48">
-            <div className="w-8 h-8 rounded-full border-2 border-indigo-400 border-t-transparent animate-spin" />
+          <div className="space-y-3">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="skeleton-shimmer h-24 rounded-2xl border border-steel/15" />
+            ))}
           </div>
         ) : sessions.length === 0 ? (
-          <div className="liquid-glass bg-slate-800/40 border border-white/10 rounded-3xl p-12 text-center">
+          <div className="liquid-glass bg-bg-panel border border-steel/20 rounded-3xl p-12 text-center">
             <span className="text-5xl mb-4 block">🗓️</span>
-            <h2 className="text-xl font-semibold text-slate-200 mb-2">No Sessions Yet</h2>
-            <p className="text-slate-400 text-sm">Start a chat session to see it here.</p>
+            <h2 className="font-display text-xl font-semibold text-slate-200 mb-2">No sessions yet</h2>
+            <p className="text-steel text-sm">Start a chat session and it&apos;ll appear here.</p>
           </div>
         ) : (
           <div className="space-y-3">
             {sessions.map((sess, i) => (
               <motion.div
                 key={sess.id}
-                initial={{ opacity: 0, y: 12 }}
+                initial={reduceMotion ? false : { opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.04 }}
+                transition={{ delay: reduceMotion ? 0 : i * 0.04 }}
                 onClick={() => setSelected(selected?.id === sess.id ? null : sess)}
-                className="liquid-glass liquid-glass-sm bg-slate-800/40 border border-white/10 hover:border-white/20 rounded-2xl p-5 cursor-pointer transition-all group"
+                className="liquid-glass liquid-glass-sm bg-bg-panel border border-steel/20 hover:border-steel/35 rounded-2xl p-5 cursor-pointer transition-all group"
               >
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center shrink-0">
-                      <BookOpen className="w-4 h-4 text-indigo-300" />
+                    <div className="w-9 h-9 rounded-xl bg-mint/15 border border-mint/25 flex items-center justify-center shrink-0">
+                      <BookOpen className="w-4 h-4 text-mint" />
                     </div>
                     <div>
-                      <p className="font-semibold text-slate-200 group-hover:text-white transition-colors">
+                      <p className="font-display font-semibold text-slate-200 group-hover:text-white transition-colors">
                         {sess.title || "Untitled Session"}
                       </p>
-                      <div className="flex items-center gap-1 text-xs text-slate-500 mt-0.5">
+                      <div className="flex items-center gap-1 text-xs text-steel mt-0.5">
                         <Clock className="w-3 h-3" />
                         <span>{formatDate(sess.started_at)}</span>
                       </div>
                       {sess.summary && (
-                        <p className="text-xs text-slate-400 mt-1.5 line-clamp-2 max-w-md">{sess.summary}</p>
+                        <p className="text-xs text-steel/80 mt-1.5 line-clamp-2 max-w-md">{sess.summary}</p>
                       )}
                     </div>
                   </div>
-                  <span className="text-xs text-slate-500 shrink-0">
+                  <span className="text-xs text-steel shrink-0 font-mono">
                     {sess.topics.length} topic{sess.topics.length !== 1 ? "s" : ""}
                   </span>
                 </div>
@@ -139,16 +139,16 @@ export default function SessionsTopicsPage() {
                   <div className="flex flex-col gap-2 mt-4">
                     {buildTopicTree(sess.topics).map(({ node, children }) => (
                       <div key={node.topic_id} className="flex flex-wrap items-center gap-2">
-                        <span className="flex items-center gap-1 px-2.5 py-1 bg-indigo-500/10 border border-indigo-500/20 rounded-full text-xs text-indigo-300">
+                        <span className="flex items-center gap-1 px-2.5 py-1 bg-ember/10 border border-ember/25 rounded-full text-xs text-ember">
                           <Tag className="w-2.5 h-2.5" />
                           {node.name}
                         </span>
                         {children.map(child => (
                           <span
                             key={child.topic_id}
-                            className="flex items-center gap-1 pl-3 py-1 pr-2.5 ml-1 border-l border-indigo-500/20 text-xs text-indigo-300/80"
+                            className="flex items-center gap-1 pl-3 py-1 pr-2.5 ml-1 border-l border-steel/25 text-xs text-steel"
                           >
-                            <span className="text-indigo-500/40">↳</span>
+                            <span className="text-steel/50">↳</span>
                             {child.name}
                           </span>
                         ))}
@@ -160,16 +160,17 @@ export default function SessionsTopicsPage() {
                 {/* Expanded: link to chat */}
                 {selected?.id === sess.id && (
                   <motion.div
-                    initial={{ opacity: 0, height: 0 }}
+                    initial={reduceMotion ? false : { opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: "auto" }}
-                    className="mt-4 pt-4 border-t border-white/10"
+                    transition={{ duration: reduceMotion ? 0 : 0.25 }}
+                    className="mt-4 pt-4 border-t border-steel/15"
                   >
                     <a
                       href={`/learn/chat/${sess.id}`}
                       onClick={(e) => e.stopPropagation()}
-                      className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600/30 hover:bg-indigo-600/50 border border-indigo-500/30 rounded-xl text-sm text-indigo-200 transition-colors"
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-mint/10 hover:bg-mint/20 border border-mint/30 hover:border-mint/50 rounded-xl text-sm text-mint transition-colors"
                     >
-                      Open Session →
+                      Open session →
                     </a>
                   </motion.div>
                 )}

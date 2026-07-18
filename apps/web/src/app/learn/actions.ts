@@ -4,7 +4,7 @@ import { createClient } from "@/utils/supabase/server"
 import { createClient as createRawClient } from "@supabase/supabase-js"
 import { redirect } from "next/navigation"
 
-export async function createLearnerSession() {
+export async function createLearnerSession(formData?: FormData) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error("Not authenticated")
@@ -33,5 +33,7 @@ export async function createLearnerSession() {
     throw new Error("Failed to create session")
   }
 
-  redirect(`/learn/chat/${data.id}`)
+  const prefill = formData?.get("prefill")
+  const query = prefill ? `?prefill=${encodeURIComponent(String(prefill))}` : ""
+  redirect(`/learn/chat/${data.id}${query}`)
 }
