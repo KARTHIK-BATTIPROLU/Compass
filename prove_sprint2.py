@@ -413,5 +413,29 @@ if not saw_nudge:
     sys.exit(1)
 print(f"   OK: quiz nudge received — {nudge['message']!r}, topics_touched={nudge['topics_touched']}")
 
+# ── 14. RLS cross-user isolation (A2 exit criteria) ───────────────────────────
+# "With only the anon key and user A's JWT, selecting user B's rows returns
+# empty." teacher_token (step 8) and access_token (step 1) are already two
+# distinct, real users — reuse them instead of creating more.
+print("14. Testing RLS cross-user isolation...")
+cross_read = httpx.get(
+    f"{SUPABASE_URL}/rest/v1/sessions?id=eq.{session_id}&select=id",
+    headers={"apikey": SUPABASE_ANON_KEY, "Authorization": f"Bearer {teacher_token}"},
+)
+if cross_read.status_code != 200:
+    print(f"FAIL: Cross-user read request itself failed - HTTP {cross_read.status_code} - {cross_read.text}")
+    sys.exit(1)
+if cross_read.json() != []:
+    print(f"FAIL: RLS is not isolating users — teacher's JWT could read another user's session: {cross_read.text}")
+    sys.exit(1)
+own_read = httpx.get(
+    f"{SUPABASE_URL}/rest/v1/sessions?id=eq.{session_id}&select=id",
+    headers={"apikey": SUPABASE_ANON_KEY, "Authorization": f"Bearer {access_token}"},
+)
+if own_read.status_code != 200 or own_read.json() == []:
+    print(f"FAIL: RLS is over-blocking — the session's own owner can't read it via anon key + JWT: {own_read.status_code} {own_read.text}")
+    sys.exit(1)
+print("   OK: cross-user read returns empty; the session's own owner can still read it.")
+
 print("PASS: Harness completed successfully!")
 sys.exit(0)

@@ -112,10 +112,36 @@ Where do the light-dependent reactions and the Calvin cycle (light-independent r
 PASS: Harness completed successfully!
 ```
 
-### Part A status
+### Part A status — final
 - A1 (harness proven, artifact pipeline fixed): ✅ done.
-- A2 (RLS): migration written and committed, ⚠️ not applied to live DB — blocked on DDL credentials, deferred by user choice.
+- A2 (RLS): ✅ done. Applied to production by the user via the Supabase SQL Editor (migrations 002 + 003). Harness step 14 (added below) proves cross-user isolation on every run, not just a one-off manual check.
 - A3 (quiz abuse-proofing): ✅ done, proven by harness steps 9–10.
+
+### A2 final proof — RLS live, cross-user isolation confirmed, harness extended
+
+Migration 002 (RLS + `artifacts.type` CHECK fix) and 003 (public quiz-read policy, a gap found while live-testing the rebuilt quiz page — see DECISIONS.md DEC-025) are both applied to production. Added a permanent harness step 14 for the A2 exit criteria ("with only the anon key and user A's JWT, selecting user B's rows returns empty") instead of leaving it as a one-off manual check. Full 14-step harness, run after both migrations were live:
+
+```
+1. Creating test user to get JWT...
+...
+8. Testing quiz-results ownership enforcement...
+   OK: quiz persisted, share link resolves, non-owner correctly received 403 on results
+9. Testing quiz submit input validation...
+   OK: oversized respondent_name and malformed body both correctly rejected with 400
+10. Testing quiz submit rate limiting (20 rapid submissions)...
+   OK: rate limit triggered (429) after 9 rapid submissions
+11. Testing session summarizer (B1)...
+   OK: summary generated — 'The topics of photosynthesis and the Calvin cycle were covered, with a focus on '...
+12. Testing drill-down topic edges (B3)...
+   OK: drill-down edge found among 6 topic(s).
+13. Testing end-of-session quiz nudge (B2)...
+   OK: quiz nudge received — 'Ready to test what you covered?', topics_touched=[...]
+14. Testing RLS cross-user isolation...
+   OK: cross-user read returns empty; the session's own owner can still read it.
+PASS: Harness completed successfully!
+```
+
+Confirms the FastAPI backend (which exclusively uses the service key, bypassing RLS) is unaffected by RLS being live — every backend-driven check (3-13) still passes unchanged.
 
 ---
 
