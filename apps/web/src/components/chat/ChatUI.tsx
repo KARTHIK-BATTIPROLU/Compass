@@ -18,12 +18,18 @@ interface Citation {
   url: string;
 }
 
+interface QuizNudge {
+  message: string;
+  topics_touched: string[];
+}
+
 interface Message {
   role: "user" | "assistant";
   content: string;
   artifacts?: Artifact[];
   citations?: Citation[];
   isError?: boolean;
+  nudge?: QuizNudge;
 }
 
 interface ChatUIProps {
@@ -57,10 +63,24 @@ export function ChatUI({ sessionId, role, availableChips, initialMessages = [] }
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || isLoading) return;
-
-    const userMessage: Message = { role: "user", content: input.trim() };
-    setMessages(prev => [...prev, userMessage]);
+    const prompt = input.trim();
     setInput("");
+    await sendMessage(prompt, activeChips);
+  };
+
+  const handleNudgeClick = async (topics: string[]) => {
+    if (isLoading) return;
+    const prompt = topics.length > 0
+      ? `Quiz me on: ${topics.join(", ")}`
+      : "Quiz me on what we covered in this session";
+    await sendMessage(prompt, ["Quiz"]);
+  };
+
+  const sendMessage = async (prompt: string, modes: string[]) => {
+    if (isLoading) return;
+
+    const userMessage: Message = { role: "user", content: prompt };
+    setMessages(prev => [...prev, userMessage]);
     setIsLoading(true);
 
     // Add empty assistant message that we'll stream into
@@ -74,7 +94,7 @@ export function ChatUI({ sessionId, role, availableChips, initialMessages = [] }
         body: JSON.stringify({
           session_id: sessionId,
           prompt: userMessage.content,
-          modes: activeChips,
+          modes,
         }),
       });
 
@@ -124,6 +144,15 @@ export function ChatUI({ sessionId, role, availableChips, initialMessages = [] }
                 msgs[msgs.length - 1] = {
                   ...msgs[msgs.length - 1],
                   citations: [...(msgs[msgs.length - 1].citations || []), ...data.data],
+                };
+                return msgs;
+              });
+            } else if (data.type === "nudge" && data.data) {
+              setMessages(prev => {
+                const msgs = [...prev];
+                msgs[msgs.length - 1] = {
+                  ...msgs[msgs.length - 1],
+                  nudge: data.data,
                 };
                 return msgs;
               });
@@ -226,6 +255,21 @@ export function ChatUI({ sessionId, role, availableChips, initialMessages = [] }
                           <ArtifactRenderer key={art.id} content={art.content} artifactType={art.type} downloadUrl={art.download_url} />
                         ))}
                       </div>
+                    )}
+
+                    {/* End-of-session quiz nudge (Part B2) — never auto-fires; only on click */}
+                    {msg.nudge && (
+                      <motion.button
+                        type="button"
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        onClick={() => handleNudgeClick(msg.nudge!.topics_touched)}
+                        disabled={isLoading}
+                        className="flex items-center justify-between w-full gap-3 px-4 py-3 rounded-2xl bg-violet-600/15 border border-violet-500/30 hover:bg-violet-600/25 hover:border-violet-500/50 text-violet-200 text-sm font-medium transition-all disabled:opacity-50"
+                      >
+                        <span>{msg.nudge.message}</span>
+                        <span aria-hidden="true">→</span>
+                      </motion.button>
                     )}
 
                     {/* Citations footer */}

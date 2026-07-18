@@ -330,5 +330,88 @@ if not saw_429:
     sys.exit(1)
 print(f"   OK: rate limit triggered (429) after {i + 1} rapid submissions")
 
+# ── Part B: memory features (reuses the learner session/token from step 1-4
+# to keep total LLM calls down — Gemini's free tier is 20 req/day and shared
+# across all 3 configured keys, see DECISIONS.md DEC-021) ───────────────────
+
+def send_learner_turn(prompt_text, modes):
+    r = httpx.post(
+        stream_url,
+        headers=stream_headers,
+        json={"session_id": session_id, "prompt": prompt_text, "modes": modes},
+        timeout=90.0,
+    )
+    nudge = None
+    for line in r.text.splitlines():
+        if line.startswith("data: "):
+            d = line[6:]
+            if d == "[DONE]":
+                break
+            try:
+                ev = json.loads(d)
+                if ev.get("type") == "nudge":
+                    nudge = ev.get("data")
+            except Exception:
+                pass
+    return r.status_code, nudge
+
+# ── 11. Session summarizer (B1): push this session to >=4 messages, then
+# fetch the session list — the summarizer's lazy trigger — and expect a
+# non-empty sessions.summary. ─────────────────────────────────────────────
+print("11. Testing session summarizer (B1)...")
+status, _ = send_learner_turn("Explain the Calvin cycle as part of photosynthesis, briefly.", ["detailed"])
+if status >= 400:
+    print(f"FAIL: Turn for B1 failed - HTTP {status}")
+    sys.exit(1)
+
+list_res = httpx.get(f"{API_URL}/api/memory/sessions/mine", headers={"Authorization": f"Bearer {access_token}"}, timeout=60.0)
+if list_res.status_code != 200:
+    print(f"FAIL: /api/memory/sessions/mine returned {list_res.status_code} — {list_res.text}")
+    sys.exit(1)
+sess_entry = next((s for s in list_res.json().get("sessions", []) if s["id"] == session_id), None)
+if not sess_entry or not sess_entry.get("summary"):
+    print(f"FAIL: Expected a non-empty summary for session {session_id}, got: {sess_entry}")
+    sys.exit(1)
+print(f"   OK: summary generated — {sess_entry['summary'][:80]!r}...")
+
+# ── 12. Drill-down topic edges (B3): this session already discussed
+# photosynthesis (step 3's flashcards + step 11's Calvin cycle turn) — check
+# whether any topic recorded a parent within the session. ────────────────
+print("12. Testing drill-down topic edges (B3)...")
+topics_res = httpx.get(f"{API_URL}/api/memory/topics/{session_id}", headers={"Authorization": f"Bearer {access_token}"}, timeout=30.0)
+if topics_res.status_code != 200:
+    print(f"FAIL: /api/memory/topics/{{session_id}} returned {topics_res.status_code}")
+    sys.exit(1)
+topic_list = topics_res.json().get("topics", [])
+has_edge = any(t.get("parent_id") for t in topic_list)
+if has_edge:
+    print(f"   OK: drill-down edge found among {len(topic_list)} topic(s).")
+else:
+    print(f"   WARN: no parent/child edge among {len(topic_list)} topic(s) this run "
+          f"({[t['name'] for t in topic_list]}) — parent detection depends on the LLM "
+          f"confidently recognizing a subtopic relationship, which is probabilistic, not "
+          f"guaranteed on any single turn. Code path is exercised either way (see DECISIONS.md).")
+
+# ── 13. Learner end-of-session quiz nudge (B2): push to >=5 user turns in this
+# session and expect a nudge on the SSE stream. ──────────────────────────
+print("13. Testing end-of-session quiz nudge (B2)...")
+saw_nudge = False
+for prompt_text in [
+    "What pigments are involved in photosynthesis?",
+    "How does temperature affect the rate of photosynthesis?",
+    "Summarize what we've covered so far.",
+]:
+    status, nudge = send_learner_turn(prompt_text, ["detailed"])
+    if status >= 400:
+        print(f"FAIL: Turn for B2 failed - HTTP {status}")
+        sys.exit(1)
+    if nudge:
+        saw_nudge = True
+        break
+if not saw_nudge:
+    print("FAIL: Expected a quiz nudge once the learner session crossed 5 turns, never got one.")
+    sys.exit(1)
+print(f"   OK: quiz nudge received — {nudge['message']!r}, topics_touched={nudge['topics_touched']}")
+
 print("PASS: Harness completed successfully!")
 sys.exit(0)

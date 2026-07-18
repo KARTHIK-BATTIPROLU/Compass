@@ -65,7 +65,42 @@ async def composer_node(state: AppState) -> dict:
     if normalized:
         logger.info(f"composer: emitting {len(normalized)} artifact(s): {[a['type'] for a in normalized]}")
 
+    nudge = _build_quiz_nudge(state, sb, session_id)
+
     return {
         "artifacts": normalized,
         "citations": citations,
+        "nudge": nudge,
+    }
+
+
+MIN_TURNS_FOR_NUDGE = 5
+
+
+def _build_quiz_nudge(state: AppState, sb, session_id: str):
+    """Part B2: once a learner has >=5 turns in a session and hasn't already
+    taken a quiz this session, surface a dismissible nudge card. Nothing is
+    auto-generated — the frontend only fires the quiz chip if the learner
+    clicks it, pre-scoped to the topics touched so far."""
+    user_info = state.get("user", {}) or {}
+    modes = [m.strip().lower() for m in state.get("modes", [])]
+    if user_info.get("role") != "learner" or "quiz" in modes or not sb or not session_id:
+        return None
+
+    try:
+        msgs_res = sb.table("messages").select("id").eq("session_id", session_id).eq("role", "user").execute()
+        turn_count = len(msgs_res.data or [])
+        if turn_count < MIN_TURNS_FOR_NUDGE:
+            return None
+
+        quiz_res = sb.table("artifacts").select("id").eq("session_id", session_id).eq("type", "quiz").execute()
+        if quiz_res.data:
+            return None
+    except Exception as e:
+        logger.warning(f"Quiz nudge check failed for session {session_id}: {e}")
+        return None
+
+    return {
+        "message": "Ready to test what you covered?",
+        "topics_touched": state.get("topics_touched", []),
     }

@@ -119,6 +119,49 @@ PASS: Harness completed successfully!
 
 ---
 
+## Final Sprint — Part B (missing features)
+
+**Date:** 2026-07-18
+
+### B1 — Session summarizer: fully proven live
+Fixed two real bugs found while building this: (1) `faculty/layout.tsx` and `learn/layout.tsx` both ordered the sidebar's session query by a column (`created_at`) that doesn't exist on `sessions` — confirmed via direct REST probe (`400 / 42703 column does not exist`) — meaning **the "Recent Chats" sidebar has been silently empty for every user, always**; fixed to `started_at`. (2) The summarizer's first draft called the LLM with only a `SystemMessage`, which Gemini rejects (`"contents are required"`) since system-only messages get pulled into `system_instruction`, leaving nothing in `contents` — fixed to a lone `HumanMessage`, matching the working pattern already used in `memory_writer.py`'s own topic extraction.
+
+Live end-to-end proof (before today's Gemini quota ran out — see below):
+```
+session entry: {
+  "id": "70e409a1-...",
+  "summary": "The tutoring conversation covered the biological process of photosynthesis,
+   including its chemical equation, cellular location, and ecological importance. The
+   student learned about the two main stages of photosynthesis, with a specific focus on
+   the mechanics, inputs, and outputs of the Calvin cycle...",
+  ...
+}
+```
+`GET /api/memory/sessions/mine` correctly generated and persisted a summary once the session crossed 4 messages, and returned the cached value (no regeneration) on repeat calls.
+
+### B2 (quiz nudge) / B3 (drill-down edges) — implemented, deterministic logic proven, LLM-driven parts blocked by exhausted Gemini quota
+While testing B2/B3 live, hit a hard wall: this project's Gemini free tier is **20 requests/day**, shared across all 3 configured keys (confirmed empirically — probed `GOOGLE_API_KEY`, `GEMINI_FALLBACK_API_KEY`, and `GEMINI_FALLBACK_API_KEY_2` independently and all three returned the identical `429 RESOURCE_EXHAUSTED` quota message; waited 90s and re-probed, still exhausted — it's a real daily cap, not a short rolling window). See DECISIONS.md DEC-021: the "resilient 3-layer LLM factory" from earlier in this sprint protects against one key being transiently unhealthy, but provides **no protection against quota exhaustion**, which turned out to be the failure mode that actually mattered.
+
+Also found and fixed while debugging this (DECISIONS.md DEC-020): `main.py`'s `/api/chat/stream` resets `state["topics_touched"]` to `[]` in the `inputs` dict on *every* turn (no reducer annotation on that field, so an explicit value in `inputs` overwrites whatever the checkpointer persisted). B3's first draft read prior-session topics from that field and got `[]` every time, regardless of quota. Fixed by having `memory_writer.py` read prior topics directly from Postgres (`_prior_topics_for_session`) instead — durable and correctly session-scoped.
+
+**What's proven, without touching the LLM** — direct unit-style calls against real Postgres data (`scratchpad/b23_unit_probe.py`), all passing:
+```
+OK: _prior_topics_for_session correctly reads Postgres, not the (broken) state field: ['Photosynthesis (unit test)']
+OK: topic_edges round-trips correctly through topics_in_session -> {'topic_id': '...', 'name': 'Calvin Cycle (unit test)', 'parent_id': '...'}
+OK: _build_quiz_nudge fires once turn_count >= 5 -> {'message': 'Ready to test what you covered?', 'topics_touched': [...]}
+OK: _build_quiz_nudge correctly suppresses itself once the session already has a quiz artifact
+OK: _build_quiz_nudge correctly stays silent below the 5-turn threshold
+```
+This proves: the nudge threshold/suppression logic, the topic_edges upsert, and `topics_in_session`'s parent_id resolution are all mechanically correct.
+
+**What's implemented but NOT observed live this session** (honest gap, not claimed as done):
+- Whether the LLM reliably identifies a genuine parent/subtopic relationship from conversation text (inherently probabilistic — the harness's own B3 check treats a missing edge as WARN, not FAIL, for exactly this reason).
+- A full `/api/chat/stream` turn actually reaching `composer_node` and streaming a `{"type": "nudge"}` SSE event to a real client, since every turn past the 2nd in live testing today aborted at the graph level on `RESOURCE_EXHAUSTED` before reaching `composer`.
+
+Harness steps 11-13 (session summarizer, drill-down edges, quiz nudge) are added to `prove_sprint2.py` and ready to run — blocked on the same quota exhaustion as everything else Gemini-dependent today. Should be re-run once quota resets to get the final live confirmation on B2/B3's LLM-dependent paths.
+
+---
+
 ## Phase 1 — Audit & Stabilize
 
 **Date:** 2026-07-18

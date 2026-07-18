@@ -4,7 +4,7 @@ import Link from "next/link";
 import { PlusCircle, MessageSquare } from "lucide-react";
 
 interface SidebarProps {
-  sessions: { id: string, title: string | null }[];
+  sessions: { id: string, title: string | null, summary?: string | null }[];
   role: "faculty" | "learner";
 }
 
@@ -55,13 +55,18 @@ export function Sidebar({ sessions, role }: SidebarProps) {
       <div className="flex-1 overflow-y-auto space-y-1 pr-2">
         <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3 px-2">Recent Chats</div>
         {sessions.map(s => (
-          <Link 
-            key={s.id} 
+          <Link
+            key={s.id}
             href={`/${role}/chat/${s.id}`}
-            className="flex items-center gap-3 px-3 py-3 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition-colors group"
+            className="flex items-start gap-3 px-3 py-3 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition-colors group"
           >
-            <MessageSquare className="w-4 h-4 opacity-50 group-hover:opacity-100 transition-opacity" />
-            <span className="truncate text-sm font-medium">{s.title || "Untitled Session"}</span>
+            <MessageSquare className="w-4 h-4 mt-0.5 opacity-50 group-hover:opacity-100 transition-opacity shrink-0" />
+            <div className="min-w-0">
+              <span className="block truncate text-sm font-medium">{s.title || "Untitled Session"}</span>
+              {s.summary && (
+                <span className="block truncate text-xs text-slate-500 mt-0.5">{s.summary}</span>
+              )}
+            </div>
           </Link>
         ))}
       </div>

@@ -13,10 +13,37 @@ from agent.memory_retrieval import (
     sessions_for_topic,
     get_weakness_profile,
 )
+from agent.memory_summarizer import maybe_summarize_session
 import os
 from agent.auth import get_current_user, user_owns_session
 
 router = APIRouter(prefix="/api/memory", tags=["memory"])
+
+
+@router.get("/sessions/mine")
+async def list_my_sessions(user = Depends(get_current_user)):
+    """Lists the current user's sessions, lazily generating a summary for
+    any session that just became eligible (>=4 messages, no summary yet).
+    This is the summarizer's trigger point — see agent/memory_summarizer.py."""
+    from agent.auth import get_supabase
+    sb = get_supabase()
+    if not sb:
+        return {"sessions": []}
+
+    res = (
+        sb.table("sessions")
+        .select("id, title, summary, started_at, class_level")
+        .eq("user_id", user.id)
+        .order("started_at", desc=True)
+        .execute()
+    )
+    sessions = res.data or []
+
+    for s in sessions:
+        summary = await maybe_summarize_session(sb, s["id"], user.id, s.get("summary"))
+        s["summary"] = summary
+
+    return {"sessions": sessions}
 
 
 @router.get("/topics/{session_id}")

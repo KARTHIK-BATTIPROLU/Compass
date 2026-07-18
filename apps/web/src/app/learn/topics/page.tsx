@@ -5,11 +5,27 @@ import { motion } from "framer-motion";
 import { createClient } from "@/utils/supabase/client";
 import { BookOpen, Clock, Tag } from "lucide-react";
 
+interface TopicNode {
+  topic_id: string;
+  name: string;
+  parent_id: string | null;
+}
+
 interface Session {
   id: string;
   title: string | null;
+  summary: string | null;
   started_at: string;
-  topics: { name: string }[];
+  topics: TopicNode[];
+}
+
+function buildTopicTree(topics: TopicNode[]): { node: TopicNode; children: TopicNode[] }[] {
+  const byId = new Map(topics.map(t => [t.topic_id, t]));
+  const roots = topics.filter(t => !t.parent_id || !byId.has(t.parent_id));
+  return roots.map(root => ({
+    node: root,
+    children: topics.filter(t => t.parent_id === root.topic_id),
+  }));
 }
 
 function formatDate(iso: string) {
@@ -29,22 +45,25 @@ export default function SessionsTopicsPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Fetch sessions
-      const { data: sessData } = await supabase
-        .from("sessions")
-        .select("id, title, started_at")
-        .eq("user_id", user.id)
-        .order("started_at", { ascending: false })
-        .limit(20);
-
-      if (!sessData) { setLoading(false); return; }
+      // Fetch sessions via the backend — this is also the summarizer's lazy
+      // trigger point: any session with >=4 messages and no summary yet gets
+      // one generated here (see agent/memory_summarizer.py).
+      const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const { authedFetch } = await import("@/lib/api");
+      let sessData: { id: string; title: string | null; summary: string | null; started_at: string }[] = [];
+      try {
+        const res = await authedFetch(`${API}/api/memory/sessions/mine`);
+        const data = await res.json();
+        sessData = data.sessions || [];
+      } catch {
+        setLoading(false);
+        return;
+      }
 
       // For each session, fetch its topics via the memory API
-      const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
       const enriched: Session[] = await Promise.all(
         sessData.map(async (s) => {
           try {
-            const { authedFetch } = await import("@/lib/api");
             const res = await authedFetch(`${API}/api/memory/topics/${s.id}`);
             const data = await res.json();
             return { ...s, topics: data.topics || [] };
@@ -105,6 +124,9 @@ export default function SessionsTopicsPage() {
                         <Clock className="w-3 h-3" />
                         <span>{formatDate(sess.started_at)}</span>
                       </div>
+                      {sess.summary && (
+                        <p className="text-xs text-slate-400 mt-1.5 line-clamp-2 max-w-md">{sess.summary}</p>
+                      )}
                     </div>
                   </div>
                   <span className="text-xs text-slate-500 shrink-0">
@@ -112,17 +134,25 @@ export default function SessionsTopicsPage() {
                   </span>
                 </div>
 
-                {/* Topic pills */}
+                {/* Topic tree — root topics with drill-down subtopics indented beneath (Part B3) */}
                 {sess.topics.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mt-4">
-                    {sess.topics.map((t, ti) => (
-                      <span
-                        key={ti}
-                        className="flex items-center gap-1 px-2.5 py-1 bg-indigo-500/10 border border-indigo-500/20 rounded-full text-xs text-indigo-300"
-                      >
-                        <Tag className="w-2.5 h-2.5" />
-                        {t.name}
-                      </span>
+                  <div className="flex flex-col gap-2 mt-4">
+                    {buildTopicTree(sess.topics).map(({ node, children }) => (
+                      <div key={node.topic_id} className="flex flex-wrap items-center gap-2">
+                        <span className="flex items-center gap-1 px-2.5 py-1 bg-indigo-500/10 border border-indigo-500/20 rounded-full text-xs text-indigo-300">
+                          <Tag className="w-2.5 h-2.5" />
+                          {node.name}
+                        </span>
+                        {children.map(child => (
+                          <span
+                            key={child.topic_id}
+                            className="flex items-center gap-1 pl-3 py-1 pr-2.5 ml-1 border-l border-indigo-500/20 text-xs text-indigo-300/80"
+                          >
+                            <span className="text-indigo-500/40">↳</span>
+                            {child.name}
+                          </span>
+                        ))}
+                      </div>
                     ))}
                   </div>
                 )}

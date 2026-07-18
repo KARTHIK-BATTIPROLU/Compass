@@ -26,6 +26,7 @@ class AppState(TypedDict):
     artifacts: List[Artifact]
     topics_touched: List[str]
     citations: List[Dict[str, Any]]
+    nudge: Optional[Dict[str, Any]]
     
     messages: Annotated[list, add_messages]
     route: str

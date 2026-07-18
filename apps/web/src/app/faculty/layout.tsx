@@ -5,12 +5,12 @@ export default async function FacultyLayout({ children }: { children: React.Reac
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   
-  let sessions: { id: string; title: string | null }[] = [];
+  let sessions: { id: string; title: string | null; summary: string | null }[] = [];
   if (user) {
     const { data } = await supabase.from('sessions')
-        .select('id, title')
+        .select('id, title, summary')
         .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
+        .order('started_at', { ascending: false });
     sessions = data || [];
   }
 

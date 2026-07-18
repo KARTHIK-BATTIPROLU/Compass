@@ -87,7 +87,10 @@ async def search_my_history(user_id: str, query: str, k: int = 5) -> list[dict]:
 
 
 def topics_in_session(session_id: str) -> list[dict]:
-    """Return all topics touched in a session (via user_topic_events)."""
+    """Return all topics touched in a session (via user_topic_events), each
+    annotated with parent_id when a drill-down edge (Part B3) links it to
+    another topic also touched in this session — the frontend uses this to
+    render an indented tree instead of a flat list."""
     sb = get_supabase()
     if not sb:
         return []
@@ -108,7 +111,24 @@ def topics_in_session(session_id: str) -> list[dict]:
                 name = row.get("topics", {})
                 if isinstance(name, dict):
                     name = name.get("name", tid)
-                out.append({"topic_id": tid, "name": name})
+                out.append({"topic_id": tid, "name": name, "parent_id": None})
+
+        if seen:
+            edges_res = (
+                sb.table("topic_edges")
+                .select("parent_id, child_id")
+                .in_("child_id", list(seen))
+                .execute()
+            )
+            parent_map = {e["child_id"]: e["parent_id"] for e in (edges_res.data or [])}
+            for t in out:
+                # Only surface the parent if it's also touched in this
+                # session — otherwise the tree would point at a node not
+                # present in this list.
+                p = parent_map.get(t["topic_id"])
+                if p in seen:
+                    t["parent_id"] = p
+
         return out
     except Exception as e:
         logger.warning(f"topics_in_session failed: {e}")

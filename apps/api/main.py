@@ -156,6 +156,9 @@ async def chat_stream(req: Request, chat_req: ChatRequest, user = Depends(get_cu
                         citations = output.get("citations", [])
                         if citations:
                             yield f"data: {json.dumps({'type': 'citations', 'data': citations})}\n\n"
+                        nudge = output.get("nudge")
+                        if nudge:
+                            yield f"data: {json.dumps({'type': 'nudge', 'data': nudge})}\n\n"
 
         except Exception as e:
             # Full detail logged server-side; safe message to client
