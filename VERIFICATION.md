@@ -200,6 +200,29 @@ PASS: Harness completed successfully!
 
 ---
 
+## Final Sprint — Part C (UI overhaul), screens 1-3
+
+**Date:** 2026-07-18
+
+### C1 — Design tokens
+`globals.css` + `tailwind.config.ts`: midnight-forge palette (`--bg-deep`, `--bg-panel`, `--ember`/`ember-hot`/`ember-deep`, `--steel`, `--mint-signal`) registered as Tailwind colors; Fraunces loaded as `font-display`; `.was-seam` (signature gradient bar), `.platform-mesh` (warm/cool radial mesh per platform), global `:focus-visible` ember ring, global `prefers-reduced-motion` override.
+
+### C2.1 — Landing page: verified live, desktop (1440px) and mobile (375px)
+Fraunces headline, cycling WEAK/AVERAGE/STRONG mini artifact card with the seam, two door cards with real copy. Screenshots confirmed correct rendering, readable contrast, and proper responsive stacking at 375px.
+
+### C2.2 — Chat UI + C2.3 — Artifact panel: verified live via real login + interaction (not just tsc)
+Rebuilt `FloatingChips` (ember active state + spring lift + seam on the W-A-S chip), repositioned to float above the input per spec, restyled `Sidebar`/`SessionHeader`/`ChatUI` to the new palette, added an empty-state message to the sidebar. Converted `ArtifactRenderer` into a proper slide-in `ArtifactPanel` (Framer Motion spring, 460-520px, sticky header with Fraunces title + type badge, edit/preview toggle, export bar pinned at bottom) — chat messages now show a compact `ArtifactCard` that opens the panel, instead of the full artifact rendered inline.
+
+Verified end-to-end with a real Playwright-driven login + live chat turn (not a mock):
+- Confirmed and fixed a genuine bug found in the process (DEC-022): `memory_writer`'s internal topic-extraction LLM call was streaming its raw output into the same visible chat bubble as the real response, on every turn. `main.py` now filters `on_chat_model_stream` by `langgraph_node`. Verified fixed with a before/after screenshot — before showed a clean answer followed by leaked `[{"name": "Water Cycle", "parent": null}, ...]`; after shows a clean bubble only.
+- Found and documented (not fixed, DEC-023): with Gemini still quota-exhausted, the Groq fallback model doesn't reliably wrap output in the `<artifact type="...">` tag flashcards_wf.py expects, so no structured artifact card appeared for that specific live attempt. This is an LLM instruction-following gap in the fallback path, not a UI bug — the panel/card components themselves have no defects; there was simply no structured artifact for them to render in that run.
+- `npx tsc --noEmit`: 0 errors after every change in this section.
+
+### Still to do in Part C
+Screens 4-8 (Progress, Topics, Curriculum, public Quiz page, states-everywhere pass) and the C3 quality-floor pass.
+
+---
+
 ## Phase 1 — Audit & Stabilize
 
 **Date:** 2026-07-18

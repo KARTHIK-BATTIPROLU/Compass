@@ -140,8 +140,16 @@ async def chat_stream(req: Request, chat_req: ChatRequest, user = Depends(get_cu
             async for event in g.astream_events(inputs, config=config, version="v2"):
                 kind = event["event"]
 
-                # Stream text tokens
+                # Stream text tokens — but only from the node actually generating
+                # the user-facing response. astream_events fires
+                # on_chat_model_stream for EVERY chat-model call in the graph,
+                # including memory_writer's internal topic-extraction LLM call;
+                # forwarding those unfiltered leaked raw extraction JSON into
+                # the visible chat message.
                 if kind == "on_chat_model_stream":
+                    node = event.get("metadata", {}).get("langgraph_node")
+                    if node == "memory_writer":
+                        continue
                     chunk = event["data"]["chunk"]
                     if chunk.content:
                         yield f"data: {json.dumps({'type': 'token', 'content': chunk.content})}\n\n"

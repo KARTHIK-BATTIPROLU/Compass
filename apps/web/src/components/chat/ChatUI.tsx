@@ -3,13 +3,15 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { FloatingChips } from "./FloatingChips";
-import { Send, Loader2, AlertCircle } from "lucide-react";
-import { ArtifactRenderer } from "./ArtifactRenderer";
+import { Send, Loader2, AlertCircle, ArrowUpRight } from "lucide-react";
+import { ArtifactRenderer, ArtifactTypeMeta } from "./ArtifactRenderer";
+import { ArtifactPanel, PanelArtifact } from "./ArtifactPanel";
 
 interface Artifact {
   id: string;
   type: string;
   content: string;
+  download_url?: string;
 }
 
 interface Citation {
@@ -46,6 +48,7 @@ export function ChatUI({ sessionId, role, availableChips, initialMessages = [] }
   const [input, setInput] = useState("");
   const [activeChips, setActiveChips] = useState<string[]>(["Detailed"]);
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedArtifact, setSelectedArtifact] = useState<PanelArtifact | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -188,17 +191,14 @@ export function ChatUI({ sessionId, role, availableChips, initialMessages = [] }
     }
   };
 
-  const accentClass = role === "faculty" ? "indigo" : "violet";
   const userBgClass = role === "faculty"
-    ? "bg-indigo-600/20 border-indigo-500/30"
-    : "bg-violet-600/20 border-violet-500/30";
-  const focusBorderClass = role === "faculty" ? "focus:border-indigo-500" : "focus:border-violet-500";
-  const btnBgClass = role === "faculty" ? "bg-indigo-600 hover:bg-indigo-700" : "bg-violet-600 hover:bg-violet-700";
+    ? "bg-ember/15 border-ember/30"
+    : "bg-mint/15 border-mint/30";
+  const focusBorderClass = role === "faculty" ? "focus:border-ember" : "focus:border-mint";
+  const btnBgClass = role === "faculty" ? "bg-ember hover:bg-ember-hot text-bg-deep" : "bg-mint hover:bg-emerald-300 text-bg-deep";
 
   return (
     <div className="flex flex-col h-screen max-w-4xl mx-auto p-4 md:p-8">
-      <FloatingChips chips={availableChips} activeChips={activeChips} onToggle={toggleChip} />
-
       {/* Message list */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto space-y-6 pb-4 scroll-smooth">
         {messages.length === 0 && (
@@ -207,13 +207,13 @@ export function ChatUI({ sessionId, role, availableChips, initialMessages = [] }
             animate={{ opacity: 1, y: 0 }}
             className="flex flex-col items-center justify-center h-full text-center space-y-6 opacity-70"
           >
-            <div className="w-24 h-24 rounded-full bg-gradient-to-tr from-indigo-500/20 to-fuchsia-500/20 animate-pulse flex items-center justify-center border border-white/5 shadow-2xl">
+            <div className={`w-24 h-24 rounded-full bg-gradient-to-tr ${role === "faculty" ? "from-ember/20 to-ember-deep/20" : "from-mint/20 to-teal-500/20"} animate-pulse flex items-center justify-center border border-steel/10 shadow-2xl`}>
               <span className="text-4xl">👋</span>
             </div>
             <div className="space-y-2">
-              <h2 className="text-xl font-bold text-slate-200">Welcome to LearnForge</h2>
-              <p className="text-slate-400 text-sm max-w-sm mx-auto">
-                Toggle chips above and ask a question to generate rich, contextual artifacts.
+              <h2 className="font-display text-xl font-semibold text-slate-200">Welcome to LearnForge</h2>
+              <p className="text-steel text-sm max-w-sm mx-auto">
+                No sessions yet — toggle a chip below and ask a question to forge your first artifact.
               </p>
             </div>
           </motion.div>
@@ -233,7 +233,7 @@ export function ChatUI({ sessionId, role, availableChips, initialMessages = [] }
                   ? `${userBgClass} text-white rounded-br-sm`
                   : msg.isError
                   ? "bg-red-900/30 border-red-500/30 text-red-200 rounded-bl-sm"
-                  : "bg-slate-800/40 border-white/10 text-slate-200 rounded-bl-sm"
+                  : "bg-bg-panel border-steel/20 text-slate-200 rounded-bl-sm"
               }`}>
                 {msg.role === "user" ? (
                   <div className="whitespace-pre-wrap">{msg.content}</div>
@@ -248,12 +248,18 @@ export function ChatUI({ sessionId, role, availableChips, initialMessages = [] }
                     {/* Streaming text content */}
                     {msg.content && <ArtifactRenderer content={msg.content} />}
 
-                    {/* Structured artifacts panel */}
+                    {/* Structured artifacts — quiz share-links render inline (small,
+                        actionable); everything else is a compact card that opens the
+                        slide-in artifact panel. */}
                     {msg.artifacts && msg.artifacts.length > 0 && (
-                      <div className="space-y-4 mt-2">
-                        {msg.artifacts.map((art: any) => (
-                          <ArtifactRenderer key={art.id} content={art.content} artifactType={art.type} downloadUrl={art.download_url} />
-                        ))}
+                      <div className="space-y-3 mt-2">
+                        {msg.artifacts.map((art: any) =>
+                          art.type === "quiz" ? (
+                            <ArtifactRenderer key={art.id} content={art.content} artifactType={art.type} downloadUrl={art.download_url} />
+                          ) : (
+                            <ArtifactCard key={art.id} artifact={art} onOpen={() => setSelectedArtifact(art)} />
+                          )
+                        )}
                       </div>
                     )}
 
@@ -265,7 +271,7 @@ export function ChatUI({ sessionId, role, availableChips, initialMessages = [] }
                         animate={{ opacity: 1, y: 0 }}
                         onClick={() => handleNudgeClick(msg.nudge!.topics_touched)}
                         disabled={isLoading}
-                        className="flex items-center justify-between w-full gap-3 px-4 py-3 rounded-2xl bg-violet-600/15 border border-violet-500/30 hover:bg-violet-600/25 hover:border-violet-500/50 text-violet-200 text-sm font-medium transition-all disabled:opacity-50"
+                        className="flex items-center justify-between w-full gap-3 px-4 py-3 rounded-2xl bg-mint/10 border border-mint/30 hover:bg-mint/20 hover:border-mint/50 text-emerald-200 text-sm font-medium transition-all disabled:opacity-50"
                       >
                         <span>{msg.nudge.message}</span>
                         <span aria-hidden="true">→</span>
@@ -302,22 +308,27 @@ export function ChatUI({ sessionId, role, availableChips, initialMessages = [] }
             animate={{ opacity: 1 }}
             className="flex justify-start"
           >
-            <div className="liquid-glass liquid-glass-flat bg-slate-800/40 border border-white/10 p-4 rounded-3xl rounded-bl-sm shadow-xl">
-              <Loader2 className="w-5 h-5 animate-spin text-slate-400" />
+            <div className="liquid-glass liquid-glass-flat bg-bg-panel border border-steel/20 p-4 rounded-3xl rounded-bl-sm shadow-xl">
+              <Loader2 className="w-5 h-5 animate-spin text-steel" />
             </div>
           </motion.div>
         )}
       </div>
 
+      {/* Chips float bottom-center, just above the input */}
+      <div className="pb-3">
+        <FloatingChips chips={availableChips} activeChips={activeChips} onToggle={toggleChip} />
+      </div>
+
       {/* Input bar */}
-      <div className="pt-4 pb-2">
+      <div className="pb-2">
         <form onSubmit={handleSend} className="relative">
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Ask a question..."
-            className={`liquid-glass liquid-glass-sm liquid-glass-flat w-full bg-slate-900/60 border border-slate-700 ${focusBorderClass} rounded-2xl py-4 pl-6 pr-14 text-white outline-none shadow-2xl transition-all placeholder:text-slate-500`}
+            className={`liquid-glass liquid-glass-sm liquid-glass-flat w-full bg-bg-panel border border-steel/25 ${focusBorderClass} rounded-2xl py-4 pl-6 pr-14 text-white outline-none shadow-2xl transition-all placeholder:text-steel/70`}
           />
           <motion.button
             type="submit"
@@ -329,6 +340,27 @@ export function ChatUI({ sessionId, role, availableChips, initialMessages = [] }
           </motion.button>
         </form>
       </div>
+
+      <ArtifactPanel artifact={selectedArtifact} onClose={() => setSelectedArtifact(null)} />
     </div>
+  );
+}
+
+function ArtifactCard({ artifact, onOpen }: { artifact: Artifact & { download_url?: string }; onOpen: () => void }) {
+  const meta = ArtifactTypeMeta(artifact.type);
+  return (
+    <motion.button
+      type="button"
+      onClick={onOpen}
+      whileHover={{ y: -1 }}
+      className="liquid-glass liquid-glass-sm w-full flex items-center gap-3 text-left bg-bg-panel border border-steel/20 hover:border-steel/40 rounded-2xl p-4 transition-colors"
+    >
+      <div className="was-seam w-[3px] self-stretch rounded-full shrink-0" aria-hidden="true" />
+      <div className="min-w-0 flex-1">
+        <span className="font-mono text-[10px] tracking-widest uppercase" style={{ color: meta.color }}>{meta.label}</span>
+        <p className="font-display text-sm font-semibold text-white truncate">{meta.title}</p>
+      </div>
+      <ArrowUpRight className="w-4 h-4 text-steel shrink-0" />
+    </motion.button>
   );
 }

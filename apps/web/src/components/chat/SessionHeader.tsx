@@ -12,46 +12,50 @@ interface SessionHeaderProps {
   };
 }
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
 export function SessionHeader({ role, contextInfo }: SessionHeaderProps) {
   const [qdrantOk, setQdrantOk] = useState(false);
 
   useEffect(() => {
     if (role === 'faculty') {
-      fetch('http://localhost:8000/api/health/qdrant')
+      fetch(`${API_BASE}/api/health/qdrant`)
         .then(res => res.json())
         .then(data => setQdrantOk(data.status === 'ok'))
         .catch(() => setQdrantOk(false));
     }
   }, [role]);
 
+  const accent = role === "faculty" ? "ember" : "mint";
+
   return (
-    <div className="liquid-glass liquid-glass-sm h-16 border-b border-white/5 bg-slate-900/30 flex items-center justify-between px-6 z-20 relative">
+    <div className="liquid-glass liquid-glass-sm h-16 border-b border-steel/10 bg-bg-panel flex items-center justify-between px-6 z-20 relative">
       <div className="flex items-center gap-3 text-white font-medium">
-        <div className={`p-1.5 rounded-lg ${role === 'faculty' ? 'bg-indigo-500/20' : 'bg-violet-500/20'}`}>
-          <User className={`w-4 h-4 ${role === 'faculty' ? 'text-indigo-400' : 'text-violet-400'}`} />
+        <div className={`p-1.5 rounded-lg bg-${accent}/15`}>
+          <User className={`w-4 h-4 text-${accent}`} />
         </div>
-        <span className="text-sm font-semibold tracking-wide">{role === 'faculty' ? 'Faculty Workspace' : 'Learner Workspace'}</span>
+        <span className="font-display text-sm font-semibold tracking-wide">{role === 'faculty' ? 'Faculty Workspace' : 'Learner Workspace'}</span>
       </div>
-      
+
       <div className="flex gap-2 items-center">
         {role === 'faculty' && (
-           <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest border ${qdrantOk ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-sm' : 'bg-rose-500/10 text-rose-400 border-rose-500/20 shadow-sm'}`}>
+           <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono uppercase tracking-widest border ${qdrantOk ? 'bg-mint/10 text-mint border-mint/25' : 'bg-red-500/10 text-red-300 border-red-500/25'}`}>
              <Database className="w-3.5 h-3.5" />
              <span>Curriculum: {qdrantOk ? 'Connected' : 'Offline'}</span>
            </div>
         )}
         {role === 'faculty' && contextInfo.classLevel && (
-          <span className="px-3 py-1 bg-indigo-500/20 text-indigo-200 border border-indigo-500/30 rounded-full text-xs font-bold uppercase tracking-widest shadow-sm">
+          <span className="px-3 py-1 bg-white/5 text-steel border border-steel/20 rounded-full text-xs font-mono uppercase tracking-widest">
             {contextInfo.classLevel}
           </span>
         )}
         {role === 'faculty' && contextInfo.language && (
-          <span className="px-3 py-1 bg-slate-800 text-slate-300 border border-slate-700 rounded-full text-xs font-medium shadow-sm">
+          <span className="px-3 py-1 bg-white/5 text-steel border border-steel/20 rounded-full text-xs font-medium">
             {contextInfo.language}
           </span>
         )}
         {role === 'learner' && contextInfo.standard && (
-          <span className="px-3 py-1 bg-violet-500/20 text-violet-200 border border-violet-500/30 rounded-full text-xs font-bold uppercase tracking-widest shadow-sm">
+          <span className="px-3 py-1 bg-white/5 text-steel border border-steel/20 rounded-full text-xs font-mono uppercase tracking-widest">
             {contextInfo.standard}
           </span>
         )}

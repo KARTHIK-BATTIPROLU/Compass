@@ -15,7 +15,7 @@ export default async function LearnerLayout({ children }: { children: React.Reac
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-950">
+    <div className="flex h-screen overflow-hidden platform-mesh platform-mesh-learner">
       <Sidebar sessions={sessions} role="learner" />
       <div className="flex-1 flex flex-col relative overflow-hidden">
         {children}

@@ -15,7 +15,7 @@ export default async function FacultyLayout({ children }: { children: React.Reac
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-950">
+    <div className="flex h-screen overflow-hidden platform-mesh platform-mesh-faculty">
       <Sidebar sessions={sessions} role="faculty" />
       <div className="flex-1 flex flex-col relative overflow-hidden">
         {children}
