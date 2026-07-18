@@ -8,6 +8,40 @@ import { motion } from "framer-motion";
 interface ArtifactRendererProps {
   content: string;
   artifactType?: string; // when passed from structured artifact panel
+  downloadUrl?: string;
+}
+
+function DownloadButton({ url, filename, label, className }: { url: string; filename: string; label: string; className: string }) {
+  const [downloading, setDownloading] = useState(false);
+
+  const handleDownload = async () => {
+    try {
+      setDownloading(true);
+      const { authedFetch } = await import("@/lib/api");
+      const res = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}${url}`);
+      if (!res.ok) throw new Error("Download failed");
+      const blob = await res.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = blobUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (e) {
+      console.error("Download error", e);
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  return (
+    <button onClick={handleDownload} disabled={downloading} className={className}>
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+      {downloading ? "Downloading..." : label}
+    </button>
+  );
 }
 
 // ── 3D Flashcard ─────────────────────────────────────────────────────────────
@@ -45,7 +79,7 @@ const parseSections = (text: string) =>
   text.split(/(?=\n## )/g).map(s => s.trim()).filter(Boolean);
 
 // ── W-A-S Script renderer ────────────────────────────────────────────────────
-function ScriptArtifact({ content }: { content: string }) {
+function ScriptArtifact({ content, downloadUrl }: { content: string, downloadUrl?: string }) {
   const [activeTab, setActiveTab] = useState<"weak" | "average" | "strong">("weak");
   const sections = { weak: "", average: "", strong: "" };
 
@@ -66,9 +100,14 @@ function ScriptArtifact({ content }: { content: string }) {
 
   return (
     <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-3xl overflow-hidden shadow-2xl mt-2">
-      <div className="bg-indigo-600/30 border-b border-white/10 px-5 py-4 flex items-center gap-3">
-        <FileText className="w-5 h-5 text-indigo-300" />
-        <span className="text-sm font-bold text-indigo-100 tracking-widest uppercase">W-A-S Teaching Script</span>
+      <div className="bg-indigo-600/30 border-b border-white/10 px-5 py-4 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <FileText className="w-5 h-5 text-indigo-300" />
+          <span className="text-sm font-bold text-indigo-100 tracking-widest uppercase">W-A-S Teaching Script</span>
+        </div>
+        {downloadUrl && (
+          <DownloadButton url={downloadUrl} filename="script.docx" label="Export DOCX" className="bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-3 py-1 rounded-lg transition-colors flex items-center gap-1 shadow-lg" />
+        )}
       </div>
       <div className="flex border-b border-white/10">
         {tabs.map(tab => (
@@ -97,7 +136,7 @@ function ScriptArtifact({ content }: { content: string }) {
 }
 
 // ── Slides renderer ───────────────────────────────────────────────────────────
-function SlidesArtifact({ content }: { content: string }) {
+function SlidesArtifact({ content, downloadUrl }: { content: string, downloadUrl?: string }) {
   const slideRegex = /\n---\n/;
   const rawContent = content.replace(/<artifact[^>]*>/g, "").replace(/<\/artifact>/g, "").trim();
   const slides = rawContent.split(slideRegex).map(s => s.trim()).filter(Boolean);
@@ -110,7 +149,12 @@ function SlidesArtifact({ content }: { content: string }) {
           <Presentation className="w-5 h-5 text-purple-300" />
           <span className="text-sm font-bold text-purple-100 tracking-widest uppercase">Presentation</span>
         </div>
-        <span className="text-xs text-purple-300 font-mono">{current + 1} / {slides.length}</span>
+        <div className="flex items-center gap-4">
+          <span className="text-xs text-purple-300 font-mono">{current + 1} / {slides.length}</span>
+          {downloadUrl && (
+            <DownloadButton url={downloadUrl} filename="presentation.pptx" label="Export PPTX" className="bg-purple-600 hover:bg-purple-500 text-white text-xs px-3 py-1 rounded-lg transition-colors flex items-center gap-1 shadow-lg" />
+          )}
+        </div>
       </div>
       <div className="p-6 min-h-[180px]">
         <div className="prose prose-invert max-w-none prose-sm text-slate-300 prose-headings:mt-0 prose-h2:text-purple-200">
@@ -149,13 +193,18 @@ function SlidesArtifact({ content }: { content: string }) {
 }
 
 // ── Lecture Flow renderer ─────────────────────────────────────────────────────
-function FlowArtifact({ content }: { content: string }) {
+function FlowArtifact({ content, downloadUrl }: { content: string, downloadUrl?: string }) {
   const rawContent = content.replace(/<artifact[^>]*>/g, "").replace(/<\/artifact>/g, "").trim();
   return (
     <div className="bg-teal-500/10 border border-teal-500/20 rounded-3xl overflow-hidden shadow-2xl mt-2">
-      <div className="bg-teal-600/30 border-b border-white/10 px-5 py-4 flex items-center gap-3">
-        <Layers className="w-5 h-5 text-teal-300" />
-        <span className="text-sm font-bold text-teal-100 tracking-widest uppercase">Lecture Flow</span>
+      <div className="bg-teal-600/30 border-b border-white/10 px-5 py-4 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Layers className="w-5 h-5 text-teal-300" />
+          <span className="text-sm font-bold text-teal-100 tracking-widest uppercase">Lecture Flow</span>
+        </div>
+        {downloadUrl && (
+          <DownloadButton url={downloadUrl} filename="flow.docx" label="Export DOCX" className="bg-teal-600 hover:bg-teal-500 text-white text-xs px-3 py-1 rounded-lg transition-colors flex items-center gap-1 shadow-lg" />
+        )}
       </div>
       <div className="p-5">
         <div className="prose prose-invert max-w-none prose-sm text-slate-300 prose-headings:mt-0 prose-h2:text-teal-200 prose-h3:text-teal-300">
@@ -169,11 +218,11 @@ function FlowArtifact({ content }: { content: string }) {
 }
 
 // ── Main Renderer ─────────────────────────────────────────────────────────────
-export function ArtifactRenderer({ content, artifactType }: ArtifactRendererProps) {
+export function ArtifactRenderer({ content, artifactType, downloadUrl }: ArtifactRendererProps) {
   // If an explicit type is passed from the structured artifact panel, use it directly
-  if (artifactType === "slides") return <SlidesArtifact content={content} />;
-  if (artifactType === "script") return <ScriptArtifact content={content} />;
-  if (artifactType === "flow")   return <FlowArtifact content={content} />;
+  if (artifactType === "slides") return <SlidesArtifact content={content} downloadUrl={downloadUrl} />;
+  if (artifactType === "script") return <ScriptArtifact content={content} downloadUrl={downloadUrl} />;
+  if (artifactType === "flow")   return <FlowArtifact content={content} downloadUrl={downloadUrl} />;
 
   // ── Regex-based detection for inline artifact tags (streamed content) ───────
   const slideMatch        = content.match(/<artifact type="slides">([\s\S]*?)<\/artifact>/);
@@ -186,9 +235,9 @@ export function ArtifactRenderer({ content, artifactType }: ArtifactRendererProp
   const diagramMatch      = content.match(/<artifact type="diagram_gallery">([\s\S]*?)<\/artifact>/);
   const flashcardsMatch   = content.match(/<artifact type="flashcards">([\s\S]*?)<\/artifact>/);
 
-  if (slideMatch)  return <SlidesArtifact content={slideMatch[1].trim()} />;
-  if (scriptMatch) return <ScriptArtifact content={scriptMatch[1].trim()} />;
-  if (flowMatch)   return <FlowArtifact content={flowMatch[1].trim()} />;
+  if (slideMatch)  return <SlidesArtifact content={slideMatch[1].trim()} downloadUrl={downloadUrl} />;
+  if (scriptMatch) return <ScriptArtifact content={scriptMatch[1].trim()} downloadUrl={downloadUrl} />;
+  if (flowMatch)   return <FlowArtifact content={flowMatch[1].trim()} downloadUrl={downloadUrl} />;
 
   if (quizMatch) {
     const token = quizMatch[1];
@@ -217,10 +266,15 @@ export function ArtifactRenderer({ content, artifactType }: ArtifactRendererProp
           <h3 className="text-blue-300 font-bold flex items-center gap-2">
             <FileText className="w-5 h-5" /> Printable Worksheet
           </h3>
-          <button onClick={() => window.print()}
-            className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors shadow-lg">
-            Print to PDF
-          </button>
+          <div className="flex gap-2">
+            {downloadUrl && (
+              <DownloadButton url={downloadUrl} filename="worksheet.docx" label="Export DOCX" className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors shadow-lg flex items-center gap-2" />
+            )}
+            <button onClick={() => window.print()}
+              className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors shadow-lg">
+              Print to PDF
+            </button>
+          </div>
         </div>
         <div className="prose prose-invert prose-blue max-w-none prose-sm print:prose-black">
           <ReactMarkdown>{worksheetMatch[1].trim()}</ReactMarkdown>
@@ -234,7 +288,12 @@ export function ArtifactRenderer({ content, artifactType }: ArtifactRendererProp
       const data = JSON.parse(researchMatch[1].trim());
       return (
         <div className="bg-amber-500/10 border border-amber-500/20 p-6 rounded-3xl shadow-xl mt-4">
-          <h3 className="text-amber-300 font-bold mb-4 text-xl">Update & Research: {data.title}</h3>
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-amber-300 font-bold text-xl">Update & Research: {data.title}</h3>
+            {downloadUrl && (
+              <DownloadButton url={downloadUrl} filename="research_brief.pdf" label="Export PDF" className="bg-amber-600 hover:bg-amber-500 text-white text-xs px-3 py-1 rounded-lg transition-colors shadow-lg" />
+            )}
+          </div>
           <div className="prose prose-invert prose-amber max-w-none prose-sm mb-6">
             <ReactMarkdown>{data.brief_markdown}</ReactMarkdown>
           </div>
@@ -262,7 +321,12 @@ export function ArtifactRenderer({ content, artifactType }: ArtifactRendererProp
       const [tab, setTab] = useState<"news" | "papers" | "docs">("news");
       return (
         <div className="bg-cyan-500/10 border border-cyan-500/20 p-6 rounded-3xl shadow-xl mt-4">
-          <h3 className="text-cyan-300 font-bold mb-4 text-xl">Resource Card</h3>
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-cyan-300 font-bold text-xl">Resource Card</h3>
+            {downloadUrl && (
+              <DownloadButton url={downloadUrl} filename="resource_card.pdf" label="Export PDF" className="bg-cyan-600 hover:bg-cyan-500 text-white text-xs px-3 py-1 rounded-lg transition-colors shadow-lg" />
+            )}
+          </div>
           <div className="flex gap-1 mb-4">
             {(["news", "papers", "docs"] as const).map(t => (
               <button key={t} onClick={() => setTab(t)}
@@ -343,13 +407,8 @@ export function ArtifactRenderer({ content, artifactType }: ArtifactRendererProp
         <div className="bg-fuchsia-500/10 border border-fuchsia-500/20 p-6 rounded-3xl shadow-xl mt-4">
           <h3 className="text-fuchsia-300 font-bold mb-6 text-xl text-center uppercase tracking-wide flex items-center justify-center gap-3">
             Flashcards: {data.title}
-            {data.download_url && (
-              <a href={`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}${data.download_url}`} 
-                 className="bg-fuchsia-600 hover:bg-fuchsia-500 text-white text-xs px-3 py-1 rounded-lg transition-colors flex items-center gap-1 shadow-lg"
-                 download>
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
-                Export to Anki
-              </a>
+            {downloadUrl && (
+              <DownloadButton url={downloadUrl} filename="flashcards.csv" label="Export to Anki" className="bg-fuchsia-600 hover:bg-fuchsia-500 text-white text-xs px-3 py-1 rounded-lg transition-colors flex items-center gap-1 shadow-lg" />
             )}
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

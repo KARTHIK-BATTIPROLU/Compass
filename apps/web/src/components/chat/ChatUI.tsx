@@ -222,8 +222,8 @@ export function ChatUI({ sessionId, role, availableChips, initialMessages = [] }
                     {/* Structured artifacts panel */}
                     {msg.artifacts && msg.artifacts.length > 0 && (
                       <div className="space-y-4 mt-2">
-                        {msg.artifacts.map((art) => (
-                          <ArtifactRenderer key={art.id} content={art.content} artifactType={art.type} />
+                        {msg.artifacts.map((art: any) => (
+                          <ArtifactRenderer key={art.id} content={art.content} artifactType={art.type} downloadUrl={art.download_url} />
                         ))}
                       </div>
                     )}

@@ -14,7 +14,7 @@ from typing import List
 from langchain_core.messages import HumanMessage
 from agent.graph import get_compiled_graph, CHECKPOINTS_DB
 from agent.auth import get_current_user, user_owns_session
-from routers import messages, health, quiz, memory, curriculum
+from routers import messages, health, quiz, memory, curriculum, export
 
 logger = logging.getLogger(__name__)
 
@@ -61,6 +61,7 @@ app.include_router(health.router)
 app.include_router(quiz.router)
 app.include_router(memory.router)
 app.include_router(curriculum.router)
+app.include_router(export.router)
 
 
 @app.get("/api/health")
