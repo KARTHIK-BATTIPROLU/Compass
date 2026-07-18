@@ -244,8 +244,23 @@ Verified end-to-end with a real Playwright-driven login + live chat turn (not a 
 - Found and documented (not fixed, DEC-023): with Gemini still quota-exhausted, the Groq fallback model doesn't reliably wrap output in the `<artifact type="...">` tag flashcards_wf.py expects, so no structured artifact card appeared for that specific live attempt. This is an LLM instruction-following gap in the fallback path, not a UI bug — the panel/card components themselves have no defects; there was simply no structured artifact for them to render in that run.
 - `npx tsc --noEmit`: 0 errors after every change in this section.
 
-### Still to do in Part C
-Screens 4-8 (Progress, Topics, Curriculum, public Quiz page, states-everywhere pass) and the C3 quality-floor pass.
+### C2.4-C2.7 + C3 mobile pass — all verified live
+
+- **Progress:** seam-gradient mastery rings (SVG linearGradient), tappable "Revisit <topic>" pills that create a new session with the chat input pre-filled (`learn/actions.ts` now accepts a `prefill` field end to end). Verified: real weakness data renders; empty state renders correctly for a user with no quiz history yet.
+- **Topics:** palette pass (indigo → ember/mint/steel); drill-down tree logic was already built in Part B3. Verified live with real data: session card shows the B1-generated summary as a subtitle, 5 real topic pills.
+- **Curriculum:** restyled as the "anvil"; added real `onDragOver`/`onDragLeave`/`onDrop` handlers — the drop zone was visually drop-target-styled before but had no actual drag-and-drop wiring.
+- **Public quiz page — full rebuild, not a palette pass:** the previous version's submit button had no handler at all (verified in the old source — no `onClick`, no `action`, nothing). New `QuizRunner` client component: name entry → one question per screen with an ember progress bar → client-side scoring → real `POST /api/quiz/{token}/submit` (the endpoint built and rate-limited in A3) → mint checkmark confirmation.
+- **C3 mobile pass:** live-testing at 375px (the quality floor's explicit requirement) found the sidebar didn't collapse — a real, significant regression (squeezed chat into a ~120px sliver). Fixed with a proper slide-over drawer + hamburger toggle, plus follow-on padding fixes on every page whose heading the fixed hamburger button then overlapped. Re-verified at 375px after the fix: clean on Chat and Topics.
+
+### A2, continued — RLS applied, one gap found and fixed, cross-user isolation now a permanent harness check
+Migration 002 applied to production by the user. Empirically re-verified: an authenticated user's own JWT can read their own `sessions` row again (was `[]` before, DEC-024); a second, unrelated user's JWT reading the first user's session by id returns `[]` (cross-user isolation); `artifacts.type='resource_card'` now inserts successfully (`201`, was a CHECK violation). While live-verifying the rebuilt public quiz page, found migration 002 never granted the public share-link path read access to `quizzes` — a gap in the migration's own design (DEC-025), not a regression. `003_public_quiz_read.sql` fixes it; **applying to production as of this writing** — the public quiz page will 404 "Quiz not found" until it lands, tracked as the one open item below.
+
+Harness step 14 now proves A2's exact stated exit criterion ("with only the anon key and user A's JWT, selecting user B's rows returns empty") on every run — full 14-step harness passes with RLS fully enforced.
+
+### Still open
+- Migration 003 (public quiz read) — written, not yet applied to production.
+- Part C screens still needing a pass: none required by spec remain unstarted; C2.8 (states) was folded into each screen's own build rather than done as a separate pass — every screen touched has a loading skeleton and/or empty state.
+- Not yet done: Part D (optimization) and Part E (deploy + demo).
 
 ---
 
