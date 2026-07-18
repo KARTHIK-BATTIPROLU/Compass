@@ -75,9 +75,47 @@ What is the balanced chemical equation for photosynthesis?,6CO₂ + 6H₂O + lig
 PASS: Harness completed successfully!
 ```
 
-### Still open for the rest of Part A
-- RLS (A2) and quiz submit-path throttling (A3) not yet started.
-- Known, not yet fixed (queued into A2's migration since it's already touching `schema.sql`): the `artifacts.type` CHECK constraint only allows `('flow','script','slides','worksheet','quiz','flashcards','resource_brief')`, but the code emits `resource_card`, `research_brief`, and `diagram_gallery` — none of which match. This means diagrams/research-brief/resource-card artifacts have never actually persisted to Postgres (silently swallowed by composer's try/except), so their export/download endpoints 404 and they vanish on reload.
+### A2 — RLS: migration written, not yet applied
+Full RLS migration (`apps/api/db/migrations/002_rls_and_artifact_types.sql`, also folded into `db/schema.sql`) is committed — per-table policies as specified, plus the `artifacts.type` CHECK constraint fix (see item 4-ish below). **Not yet applied to the live Supabase project**: `apps/api/.env` only has PostgREST/Auth API credentials, none of which can execute DDL. Needs a direct Postgres connection string or manual execution via the Supabase SQL Editor — user chose to defer this and keep moving through the rest of the sprint (see DECISIONS.md DEC-016).
+
+### A3 — Public quiz path locked down
+`routers/quiz.py::submit_quiz` now enforces: 10 req/60s per client IP, 10 req/60s per quiz token (independent in-memory sliding windows — single-process limitation noted in DECISIONS.md DEC-017), `respondent_name` ≤ 80 chars, `answers` ≤ 20KB, and manual JSON-body validation returning 400 (not FastAPI's default 422) on anything malformed. Harness steps 9–10 below prove both the 400s and the 429.
+
+### Transcript (full harness, Part A complete — 10 checks)
+
+```
+1. Creating test user to get JWT...
+2. Creating mock session for user 8abe9696-355e-4852-ad11-0da42ecca4bf...
+3. Querying /api/chat/stream for session 4dcbc5aa-f76c-48fe-987a-ff04d7efbdae...
+   Response received...
+4. Testing download_url: /api/artifacts/df6f4cad-2bea-49e4-a06b-1f46d3ca3b1d/export?format=csv
+
+--- CSV Output Preview ---
+Front,Back
+What is the balanced chemical equation for photosynthesis?,6CO₂ + 6H₂O + light energy → C₆H₁₂O₆ + 6O₂
+Where do the light-dependent reactions and the Calvin cycle (light-independent reacti
+--------------------------
+
+5. Testing Wikimedia image search...
+   OK: 3 image(s), first='Biological illustration'
+6. Testing Semantic Scholar search...
+   WARN: Semantic Scholar is rate-limiting unauthenticated requests right now (shared global quota — outside this app's control). Verifying the wrapper handles it without crashing (its own built-in retry may still recover)...
+   OK: search_semantic_scholar degrades to [] cleanly under rate limiting (no crash).
+7. Testing Anki .apkg download...
+   OK: .apkg downloaded, 53466 bytes
+8. Testing quiz-results ownership enforcement...
+   OK: quiz persisted, share link resolves, non-owner correctly received 403 on results
+9. Testing quiz submit input validation...
+   OK: oversized respondent_name and malformed body both correctly rejected with 400
+10. Testing quiz submit rate limiting (20 rapid submissions)...
+   OK: rate limit triggered (429) after 9 rapid submissions
+PASS: Harness completed successfully!
+```
+
+### Part A status
+- A1 (harness proven, artifact pipeline fixed): ✅ done.
+- A2 (RLS): migration written and committed, ⚠️ not applied to live DB — blocked on DDL credentials, deferred by user choice.
+- A3 (quiz abuse-proofing): ✅ done, proven by harness steps 9–10.
 
 ---
 

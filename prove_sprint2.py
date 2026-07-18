@@ -180,12 +180,15 @@ probe = httpx.get(
 if probe.status_code == 429:
     print("   WARN: Semantic Scholar is rate-limiting unauthenticated requests right now "
           "(shared global quota — outside this app's control). Verifying the wrapper "
-          "degrades gracefully instead of crashing...")
+          "handles it without crashing (its own built-in retry may still recover)...")
     degraded = asyncio.run(search_semantic_scholar("test query", limit=1))
-    if degraded != []:
-        print(f"FAIL: Expected [] on persistent rate limit, got: {degraded}")
+    if degraded and not degraded[0].get("title"):
+        print(f"FAIL: search_semantic_scholar returned malformed data: {degraded}")
         sys.exit(1)
-    print("   OK: search_semantic_scholar degrades to [] cleanly under rate limiting (no crash).")
+    if degraded:
+        print(f"   OK: search_semantic_scholar recovered via its own retry — {len(degraded)} result(s).")
+    else:
+        print("   OK: search_semantic_scholar degrades to [] cleanly under rate limiting (no crash).")
 else:
     scholar_results = asyncio.run(search_semantic_scholar("transformer neural network architecture", limit=3))
     if not scholar_results:
@@ -286,6 +289,46 @@ if forbidden_res.status_code != 403:
     print(f"FAIL: Expected 403 for non-owner quiz-results access, got {forbidden_res.status_code} — {forbidden_res.text}")
     sys.exit(1)
 print("   OK: quiz persisted, share link resolves, non-owner correctly received 403 on results")
+
+# ── 9. Quiz submit input caps (oversized name -> 400) ─────────────────────────
+print("9. Testing quiz submit input validation...")
+submit_url = f"{API_URL}/api/quiz/{share_token}/submit"
+
+oversized_res = httpx.post(submit_url, json={
+    "quiz_id": "x",
+    "respondent_name": "A" * 200,
+    "answers": {"q1": "A"},
+    "score": 80,
+    "per_topic": {},
+})
+if oversized_res.status_code != 400:
+    print(f"FAIL: Expected 400 for oversized respondent_name, got {oversized_res.status_code} — {oversized_res.text}")
+    sys.exit(1)
+
+malformed_res = httpx.post(submit_url, content=b"not json", headers={"Content-Type": "application/json"})
+if malformed_res.status_code != 400:
+    print(f"FAIL: Expected 400 for malformed body, got {malformed_res.status_code} — {malformed_res.text}")
+    sys.exit(1)
+print("   OK: oversized respondent_name and malformed body both correctly rejected with 400")
+
+# ── 10. Quiz submit rate limiting (20 rapid submissions -> 429) ───────────────
+print("10. Testing quiz submit rate limiting (20 rapid submissions)...")
+saw_429 = False
+for i in range(20):
+    burst_res = httpx.post(submit_url, json={
+        "quiz_id": "x",
+        "respondent_name": f"Burst{i}",
+        "answers": {"q1": "A"},
+        "score": 80,
+        "per_topic": {},
+    })
+    if burst_res.status_code == 429:
+        saw_429 = True
+        break
+if not saw_429:
+    print("FAIL: Expected a 429 within 20 rapid submissions, never got one.")
+    sys.exit(1)
+print(f"   OK: rate limit triggered (429) after {i + 1} rapid submissions")
 
 print("PASS: Harness completed successfully!")
 sys.exit(0)

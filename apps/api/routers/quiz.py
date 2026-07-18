@@ -1,4 +1,7 @@
-from fastapi import APIRouter, HTTPException
+import json
+import time
+from collections import defaultdict
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 from supabase import create_client, Client
 import os
@@ -17,6 +20,31 @@ class QuizResponse(BaseModel):
     score: int
     per_topic: Dict[str, Any]
 
+# ── Public quiz-submit abuse guards ──────────────────────────────────────────
+# In-memory sliding-window counters. Single-process only: this resets on
+# restart and doesn't share state across workers/replicas — acceptable for
+# the current single-instance deployment, noted in DECISIONS.md.
+_RATE_WINDOW_SECONDS = 60
+_MAX_PER_IP = 10
+_MAX_PER_TOKEN = 10
+_MAX_NAME_LEN = 80
+_MAX_ANSWERS_BYTES = 20 * 1024
+
+_ip_hits: Dict[str, list] = defaultdict(list)
+_token_hits: Dict[str, list] = defaultdict(list)
+
+def _check_rate_limit(store: Dict[str, list], key: str, limit: int) -> bool:
+    """Returns True if the request is allowed, False if it should be throttled."""
+    now = time.time()
+    hits = store[key]
+    cutoff = now - _RATE_WINDOW_SECONDS
+    while hits and hits[0] < cutoff:
+        hits.pop(0)
+    if len(hits) >= limit:
+        return False
+    hits.append(now)
+    return True
+
 @router.get("/api/quiz/{token}")
 async def get_quiz(token: str):
     res = supabase.table("quizzes").select("*").eq("share_token", token).execute()
@@ -25,14 +53,54 @@ async def get_quiz(token: str):
     return res.data[0]
 
 @router.post("/api/quiz/{token}/submit")
-async def submit_quiz(token: str, req: QuizResponse):
+async def submit_quiz(token: str, request: Request):
+    client_ip = request.client.host if request.client else "unknown"
+
+    if not _check_rate_limit(_ip_hits, client_ip, _MAX_PER_IP):
+        raise HTTPException(status_code=429, detail="Too many submissions from this device — please wait a minute and try again.")
+    if not _check_rate_limit(_token_hits, token, _MAX_PER_TOKEN):
+        raise HTTPException(status_code=429, detail="This quiz is getting a lot of submissions right now — please wait a minute and try again.")
+
+    try:
+        body = await request.json()
+        if not isinstance(body, dict):
+            raise ValueError("body must be a JSON object")
+    except Exception:
+        raise HTTPException(status_code=400, detail="Malformed request body — expected a JSON object.")
+
+    respondent_name = body.get("respondent_name")
+    answers = body.get("answers")
+    score = body.get("score")
+    per_topic = body.get("per_topic")
+
+    if not isinstance(respondent_name, str) or not respondent_name.strip():
+        raise HTTPException(status_code=400, detail="respondent_name is required.")
+    if len(respondent_name) > _MAX_NAME_LEN:
+        raise HTTPException(status_code=400, detail=f"respondent_name must be {_MAX_NAME_LEN} characters or fewer.")
+    if not isinstance(answers, dict):
+        raise HTTPException(status_code=400, detail="answers must be an object.")
+    if len(json.dumps(answers)) > _MAX_ANSWERS_BYTES:
+        raise HTTPException(status_code=400, detail="answers payload is too large.")
+    if not isinstance(score, (int, float)):
+        raise HTTPException(status_code=400, detail="score must be a number.")
+    if not isinstance(per_topic, dict):
+        raise HTTPException(status_code=400, detail="per_topic must be an object.")
+
+    req = QuizResponse(
+        quiz_id=str(body.get("quiz_id", "")),
+        respondent_name=respondent_name,
+        answers=answers,
+        score=int(score),
+        per_topic=per_topic,
+    )
+
     res = supabase.table("quizzes").select("id, artifacts(session_id)").eq("share_token", token).execute()
     if not res.data:
         raise HTTPException(status_code=404)
-        
+
     db_quiz_id = res.data[0]["id"]
     session_id = res.data[0].get("artifacts", {}).get("session_id")
-    
+
     supabase.table("quiz_responses").insert({
         "quiz_id": db_quiz_id,
         "respondent_name": req.respondent_name,
