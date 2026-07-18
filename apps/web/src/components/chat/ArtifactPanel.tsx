@@ -22,7 +22,6 @@ const EDITABLE_TYPES = new Set(["script", "flow", "worksheet"]);
 export function ArtifactPanel({ artifact, onClose }: ArtifactPanelProps) {
   const reduceMotion = useReducedMotion();
   const [mode, setMode] = useState<"preview" | "edit">("preview");
-  const [draft, setDraft] = useState("");
 
   const meta = artifact ? ArtifactTypeMeta(artifact.type) : null;
   const editable = artifact ? EDITABLE_TYPES.has(artifact.type) : false;
@@ -88,7 +87,6 @@ export function ArtifactPanel({ artifact, onClose }: ArtifactPanelProps) {
               {mode === "edit" ? (
                 <textarea
                   defaultValue={artifact.content}
-                  onChange={(e) => setDraft(e.target.value)}
                   className="w-full h-full min-h-[60vh] bg-black/20 border border-steel/20 rounded-2xl p-4 text-sm text-slate-200 font-mono outline-none focus:border-ember resize-none"
                 />
               ) : (

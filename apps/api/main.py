@@ -23,9 +23,51 @@ from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 
 _checkpointer = None
 
+
+def _prune_old_checkpoints(db_path: str, max_age_days: int = 14) -> None:
+    """Delete checkpoint/write rows older than max_age_days. Best-effort —
+    failures are logged, never fatal to startup.
+
+    LangGraph checkpoint_ids are UUID6 (see
+    langgraph.checkpoint.base.id.uuid6): time-ordered, so a lexicographic
+    string comparison against a reference UUID6 built for the cutoff
+    timestamp works as an age filter without needing a separate timestamp
+    column."""
+    import sqlite3
+    import time as time_module
+
+    if not os.path.exists(db_path):
+        return
+    try:
+        from langgraph.checkpoint.base.id import UUID
+
+        cutoff_100ns = (time_module.time_ns() - max_age_days * 86400 * 10**9) // 100 + 0x01B21DD213814000
+        uuid_int = ((cutoff_100ns >> 12) & 0xFFFFFFFFFFFF) << 80
+        uuid_int |= (cutoff_100ns & 0x0FFF) << 64
+        # clock_seq=0, node=0 -> smallest possible UUID6 at this timestamp,
+        # so real checkpoint_ids from the same instant still sort >= it.
+        cutoff_id = str(UUID(int=uuid_int, version=6))
+
+        conn = sqlite3.connect(db_path)
+        try:
+            cur = conn.cursor()
+            cur.execute("DELETE FROM checkpoints WHERE checkpoint_id < ?", (cutoff_id,))
+            deleted_checkpoints = cur.rowcount
+            cur.execute("DELETE FROM writes WHERE checkpoint_id < ?", (cutoff_id,))
+            deleted_writes = cur.rowcount
+            conn.commit()
+        finally:
+            conn.close()
+        if deleted_checkpoints or deleted_writes:
+            logger.info(f"Pruned {deleted_checkpoints} checkpoint(s) and {deleted_writes} write(s) older than {max_age_days} days")
+    except Exception as e:
+        logger.warning(f"Checkpoint prune failed (non-fatal): {e}")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global _checkpointer
+    _prune_old_checkpoints(CHECKPOINTS_DB)
     async with AsyncSqliteSaver.from_conn_string(CHECKPOINTS_DB) as saver:
         _checkpointer = saver
         yield

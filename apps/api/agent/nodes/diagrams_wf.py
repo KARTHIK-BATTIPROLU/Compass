@@ -1,5 +1,6 @@
 from agent.state import AppState
 from agent.llm import get_llm
+from agent.prompt_utils import trim_history
 from langchain_core.messages import SystemMessage, HumanMessage
 from langfuse import observe
 import uuid
@@ -65,7 +66,7 @@ IMAGES TO ANALYZE:
                 "image_url": {"url": f"data:image/jpeg;base64,{b64}"}
             })
 
-    messages = state.get("messages", []) + [HumanMessage(content=content_blocks)]
+    messages = trim_history(state.get("messages", [])) + [HumanMessage(content=content_blocks)]
     response = await llm.ainvoke(messages)
     
     artifacts = state.get("artifacts", [])

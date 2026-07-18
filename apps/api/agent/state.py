@@ -27,6 +27,7 @@ class AppState(TypedDict):
     topics_touched: List[str]
     citations: List[Dict[str, Any]]
     nudge: Optional[Dict[str, Any]]
-    
+    session_summary: Optional[str]
+
     messages: Annotated[list, add_messages]
     route: str

@@ -3,6 +3,16 @@
 
 ---
 
+## 2026-07-18 — Final Sprint, Part D
+
+### DEC-026: Groq fast-tier deliberately excludes any node that needs the `<artifact>` tag format
+`get_fast_llm()` (Groq-primary) is only used for `memory_writer`'s topic extraction and `quiz_wf`'s quiz JSON — both plain-JSON outputs. Flashcards/slides/script/lecture-flow/research/resource all need the custom `<artifact type="...">` wrapper, and DEC-023 already found Groq unreliable at following it — routing those to the fast tier would trade latency for a real chance of silently producing no artifact. Kept on Gemini-primary.
+
+### DEC-027: `next build` failure was a real gap `tsc --noEmit` didn't cover
+Part D5 ran `next build` for the first time this sprint (previous verification only ever ran `tsc --noEmit`, which had been passing throughout). The full build failed on 15 ESLint/type errors across 6 files — dead code (`DownloadButton`, unused `draft` state, unused imports), `any`-typed catch blocks and map callbacks, and two genuine `undefined`-narrowing errors that only surfaced once the `any`s were replaced with real types. All fixed; `next build` now passes. Worth remembering: `tsc --noEmit` is necessary but not sufficient proof a Next.js app builds — it doesn't run ESLint, and Next's own stricter build-time type-checking pass can catch narrowing issues `tsc --noEmit`'s default config lets through.
+
+---
+
 ## 2026-07-18 — Phase 1 Recovery Audit
 
 ### DEC-001: gate_wf removed

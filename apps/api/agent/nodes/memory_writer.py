@@ -80,10 +80,12 @@ async def _extract_topics_with_parents(prompt: str, response_text: str, prior_to
     memory_writer_node record a drill-down edge (Part B3). Returns
     [{"name": str, "parent": str | None}], [] on failure."""
     try:
-        from agent.llm import get_llm
+        from agent.llm import get_fast_llm
         from langchain_core.messages import HumanMessage
 
-        llm = get_llm(temperature=0.0)
+        # Fast/cheap tier (Groq-primary): this is a short, plain-JSON job, not
+        # long-form generation — see get_fast_llm's docstring for why the split.
+        llm = get_fast_llm(temperature=0.0)
         prior_str = ", ".join(prior_topics[:20]) if prior_topics else "(none yet)"
         extraction_prompt = f"""Extract 1-5 specific academic topic names from this conversation turn.
 

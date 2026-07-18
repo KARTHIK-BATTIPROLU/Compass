@@ -98,10 +98,10 @@ export default function CurriculumUploadPage() {
       loadFiles();
 
       setTimeout(() => setUploadStatus("idle"), 3000);
-    } catch (e: any) {
+    } catch (e) {
       console.error("Upload error:", e);
       setUploadStatus("error");
-      setErrorMessage(e.message || "Something went wrong processing this document — try again.");
+      setErrorMessage(e instanceof Error ? e.message : "Something went wrong processing this document — try again.");
     } finally {
       setUploading(false);
     }

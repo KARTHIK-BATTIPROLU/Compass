@@ -84,8 +84,8 @@ export function QuizRunner({ token, title, questions, apiBase }: QuizRunnerProps
         throw new Error(body.detail || "Submission failed — please try again.");
       }
       setStage("done");
-    } catch (e: any) {
-      setErrorMsg(e.message || "Something went wrong submitting your answers.");
+    } catch (e) {
+      setErrorMsg(e instanceof Error ? e.message : "Something went wrong submitting your answers.");
       setStage("error");
     }
   };

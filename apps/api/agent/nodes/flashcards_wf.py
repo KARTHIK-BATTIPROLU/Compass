@@ -1,5 +1,6 @@
 from agent.state import AppState
 from agent.llm import get_llm
+from agent.prompt_utils import trim_history, summary_preamble
 from langchain_core.messages import SystemMessage
 from langfuse import observe
 import uuid
@@ -70,9 +71,9 @@ Schema:
   ]
 }}
 </artifact>
-"""
+{summary_preamble(state.get("session_summary"))}"""
 
-    messages = [SystemMessage(content=system_prompt)] + state.get("messages", [])
+    messages = [SystemMessage(content=system_prompt)] + trim_history(state.get("messages", []))
     response = await llm.ainvoke(messages)
     
     artifacts = state.get("artifacts", [])

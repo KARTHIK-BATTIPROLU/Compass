@@ -1,5 +1,6 @@
 from agent.state import AppState
 from agent.llm import get_llm
+from agent.prompt_utils import trim_history, summary_preamble
 from langchain_core.messages import SystemMessage
 from langfuse import observe
 
@@ -32,9 +33,9 @@ async def detailed_wf_node(state: AppState):
 
     system_prompt = f"""You are LearnForge, an advanced AI learning assistant.
 The user is a {role}. Class level: {class_level if class_level else 'not specified'}.
-Provide a highly detailed, step-by-step, well-structured explanation. Use markdown headers, bullet points, and examples.{weakness_section}{curriculum_section}"""
+Provide a highly detailed, step-by-step, well-structured explanation. Use markdown headers, bullet points, and examples.{weakness_section}{curriculum_section}{summary_preamble(state.get("session_summary"))}"""
 
-    messages = [SystemMessage(content=system_prompt)] + state.get("messages", [])
+    messages = [SystemMessage(content=system_prompt)] + trim_history(state.get("messages", []))
     response = await llm.ainvoke(messages)
 
     return {"messages": [response]}

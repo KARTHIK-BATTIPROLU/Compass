@@ -67,6 +67,7 @@ async def context_loader_node(state: AppState) -> AppState:
     class_level = None
     curriculum_ctx = []
     weakness_ctx = None
+    session_summary = None
 
     supabase = get_supabase()
 
@@ -77,6 +78,7 @@ async def context_loader_node(state: AppState) -> AppState:
                 session = session_res.data[0]
                 user_id = session.get("user_id")
                 class_level = session.get("class_level")
+                session_summary = session.get("summary")
 
                 user_res = supabase.table("users").select("*").eq("id", user_id).execute()
                 if user_res.data:
@@ -107,14 +109,17 @@ async def context_loader_node(state: AppState) -> AppState:
             logger.error(f"Error loading session/user context: {e}")
 
     # Retrieve curriculum chunks for EVERY faculty generation (not just Curriculum chip)
+    # Capped to top-5 chunks, ~600 tokens (2400 chars) each — long sessions
+    # with lots of retrieved context were the biggest single prompt-size
+    # driver before this cap.
     is_faculty = user_info.get("role") == "faculty"
     if is_faculty and prompt:
         vs = get_vector_store()
         if vs:
             try:
-                docs = await vs.asimilarity_search(prompt, k=4)
+                docs = await vs.asimilarity_search(prompt, k=5)
                 curriculum_ctx = [
-                    {"content": doc.page_content, "metadata": doc.metadata}
+                    {"content": doc.page_content[:2400], "metadata": doc.metadata}
                     for doc in docs
                 ]
             except Exception as e:
@@ -125,4 +130,5 @@ async def context_loader_node(state: AppState) -> AppState:
         "class_level": class_level,
         "curriculum_ctx": curriculum_ctx,
         "weakness_ctx": weakness_ctx,
+        "session_summary": session_summary,
     }

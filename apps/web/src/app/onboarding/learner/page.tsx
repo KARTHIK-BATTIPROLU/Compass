@@ -7,7 +7,7 @@ export default function LearnerOnboardingPage() {
       <div className="relative z-10 w-full max-w-md px-4">
         <div className="liquid-glass liquid-glass-lg bg-slate-900/40 rounded-3xl p-8 border border-white/10 shadow-2xl">
           <h1 className="text-3xl font-bold text-white mb-2">Welcome, Learner!</h1>
-          <p className="text-slate-400 mb-8 font-light">Let's set up your profile so we can provide the best resources for your level.</p>
+          <p className="text-slate-400 mb-8 font-light">Let&apos;s set up your profile so we can provide the best resources for your level.</p>
           
           <form action={completeLearnerOnboarding} className="space-y-6">
             <div>

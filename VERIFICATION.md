@@ -264,6 +264,40 @@ Harness step 14 now proves A2's exact stated exit criterion ("with only the anon
 
 ---
 
+## Final Sprint — Part D (optimization)
+
+**Date:** 2026-07-18
+
+### D1 — Parallelize W-A-S
+`was_wf.py`'s slides and script generation now run via `asyncio.gather` instead of sequential `await`s. Measured a real end-to-end W-A-S turn (lecture flow → W-A-S, same session, same prompt) both ways by temporarily swapping in the pre-parallelization version and back:
+- Sequential (original): **21.69s**
+- Parallel (current): **18.97s**
+
+~13% faster — more modest than the spec's "~2×" estimate. Both calls are long-form Gemini generations against the same underlying account/quota, so they don't achieve full independent-network-call parallelism (some queuing/rate-limit-window sharing likely still applies); the mechanism is real and measured, just less dramatic than the estimate under today's conditions. Reported honestly rather than rounded up.
+
+### D2 — Model routing
+Added `agent/llm.py::get_fast_llm()` — Groq-primary (llama-3.3-70b-versatile), Gemini-fallback, for short/structured/plain-JSON jobs. Routed: `memory_writer`'s topic extraction, `quiz_wf`'s quiz JSON generation. Deliberately **not** routed to the fast tier: flashcards, slides, script, lecture flow, research/resource synthesis — all need the custom `<artifact type="...">` tag wrapper, and DEC-023 already found Groq unreliable at following that exact format. Each tier now tags the current Langfuse span with `{model_tier, model}` metadata via `_log_model_choice()` (best-effort, degrades silently if Langfuse isn't configured — same pattern as the rest of the codebase).
+
+### D3 — Trim prompt payloads
+`context_loader.py`: curriculum retrieval capped to top-5 chunks (was top-4, so also a small quality bump) at ≤600 tokens (2400 chars) each. New `agent/prompt_utils.py::trim_history()` caps conversation history sent to the LLM to the last 12 turns (24 messages) across all 8 nodes that were previously appending the full, ever-growing session history to every prompt (`detailed_wf`, `curriculum_wf`, `quiz_wf`, `worksheet_wf`, `research_wf`, `resource_wf`, `diagrams_wf`, `flashcards_wf`). `context_loader` now also surfaces `sessions.summary` (Part B1) into state as `session_summary`, injected as a short preamble ("EARLIER IN THIS SESSION (summary): ...") so trimming history doesn't lose everything before the window.
+
+### D4 — Embedding cache
+`routers/curriculum.py`'s upload endpoint now derives a deterministic Qdrant point ID per chunk (`uuid5` of the chunk's SHA-256), retrieves which of the incoming chunks' IDs already exist before calling the embedding API, and only embeds the ones that are new — re-uploading an identical or overlapping document skips the embedding-API cost for unchanged chunks entirely.
+
+### D5 — Frontend
+- `ArtifactPanel` (the slide-in with all the artifact sub-renderers) is now `next/dynamic`-loaded with `ssr: false` instead of bundled into the initial chat page load.
+- Extracted `MessageBubble` as a `React.memo`'d component — a token/artifact/citation update to the currently-streaming message no longer re-renders every earlier message in a long session (verified this is a real win, not just cosmetic: `setMessages` always replaces only the last array element, so every prior message's object reference — and therefore its memo — stays stable).
+- `npx tsc --noEmit`: 0 errors (was already true throughout the sprint).
+- `next build`: **initially failed** — `tsc` alone doesn't catch everything Next's build pipeline enforces. Found and fixed 15 real ESLint/type errors across 6 files: unused imports/vars (`Presentation`, `Layers`, a fully dead `DownloadButton` component superseded by `ArtifactPanel`'s `ExportBar`, an unused `draft` state with no save action wired to it, an unused `options` destructure in `middleware.ts`), an unescaped apostrophe, `any`-typed catch blocks narrowed to `e instanceof Error`, and six `any`-typed map callbacks replaced with real interfaces (`CitationItem`, `DiagramImage`, `FlashcardCard`, `ResourceLink`, `ResourceCardData`) — which then surfaced two genuine `undefined`-narrowing type errors `tsc --noEmit`'s looser config had been passing through. `next build` now succeeds cleanly (only two non-blocking `<img>`-vs-`next/image` performance warnings, correctly not using `next/image` for arbitrary external LLM-sourced image URLs).
+
+### D6 — Checkpoint hygiene
+`apps/api/data/` added to `.gitignore`; the previously-committed `checkpoints.db*` files untracked via `git rm --cached` (kept on disk — nothing deleted locally). Added `_prune_old_checkpoints()` to `main.py`'s startup lifespan: since LangGraph checkpoint IDs are UUID6 (time-ordered), it reconstructs a reference UUID6 for the 14-day-old cutoff and deletes older rows via plain lexicographic string comparison — no separate timestamp column needed. Verified correct with a synthetic test: a forged 20-day-old checkpoint was deleted, a fresh one survived.
+
+### Full harness re-run after all of D1-D6
+All 14 checks still pass (transcript omitted here, identical shape to the Part A/B/C runs above) — confirms none of the optimization work broke anything, including the Groq-routed quiz generation (step 8) and topic extraction feeding the drill-down check (step 12).
+
+---
+
 ## Phase 1 — Audit & Stabilize
 
 **Date:** 2026-07-18

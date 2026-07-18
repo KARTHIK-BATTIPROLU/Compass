@@ -151,36 +151,47 @@ async def upload_curriculum(
         logger.error(f"Failed to insert file record: {e}")
         raise HTTPException(status_code=500, detail="Failed to record file metadata")
 
-    # 4. Embed & Upsert to Qdrant
+    # 4. Embed & Upsert to Qdrant — skip re-embedding chunks whose exact text
+    # was already indexed (e.g. re-uploading the same syllabus, or two files
+    # sharing a boilerplate section). Point IDs are deterministic (uuid5 of
+    # the chunk text), so a Qdrant retrieve-by-ID check is enough to know
+    # what's already there without touching the embedding API.
     try:
-        vectors = await emb.aembed_documents(chunks)
+        import hashlib
         from qdrant_client.models import PointStruct
-        
-        points = []
-        for i, (chunk, vector) in enumerate(zip(chunks, vectors)):
-            points.append(
+
+        chunk_ids = [str(uuid.uuid5(uuid.NAMESPACE_URL, hashlib.sha256(c.encode()).hexdigest())) for c in chunks]
+
+        existing = qdrant.retrieve(collection_name="curriculum_chunks", ids=chunk_ids, with_vectors=False, with_payload=False)
+        existing_ids = {str(p.id) for p in existing}
+
+        to_embed_indices = [i for i, cid in enumerate(chunk_ids) if cid not in existing_ids]
+        skipped = len(chunks) - len(to_embed_indices)
+        if skipped:
+            logger.info(f"Embedding cache: skipped {skipped}/{len(chunks)} chunk(s) already indexed with identical text")
+
+        if to_embed_indices:
+            new_vectors = await emb.aembed_documents([chunks[i] for i in to_embed_indices])
+            points = [
                 PointStruct(
-                    id=str(uuid.uuid4()),
+                    id=chunk_ids[i],
                     vector=vector,
                     payload={
                         "file_id": file_id,
                         "user_id": user.id,
                         "filename": file.filename,
                         "topic": topic,
-                        "page_content": chunk, # Keep schema matched with langchain QdrantVectorStore
-                        "metadata": {          # which reads page_content and metadata
+                        "page_content": chunks[i], # Keep schema matched with langchain QdrantVectorStore
+                        "metadata": {               # which reads page_content and metadata
                             "topic": topic,
                             "filename": file.filename,
                             "chunk_index": i
                         }
                     }
                 )
-            )
-        
-        qdrant.upsert(
-            collection_name="curriculum_chunks",
-            points=points
-        )
+                for i, vector in zip(to_embed_indices, new_vectors)
+            ]
+            qdrant.upsert(collection_name="curriculum_chunks", points=points)
     except Exception as e:
         logger.error(f"Failed to upsert chunks: {e}")
         # Cleanup file record on failure

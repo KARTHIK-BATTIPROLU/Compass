@@ -1,5 +1,6 @@
 from agent.state import AppState
-from agent.llm import get_llm
+from agent.llm import get_fast_llm
+from agent.prompt_utils import trim_history, summary_preamble
 from langchain_core.messages import SystemMessage
 from langfuse import observe
 import os
@@ -22,7 +23,9 @@ def get_supabase():
 
 @observe()
 async def quiz_wf_node(state: AppState):
-    llm = get_llm(temperature=0.2)
+    # Fast/cheap tier (Groq-primary): quiz output is plain JSON, not the
+    # custom <artifact> tag format Groq is unreliable at (see get_fast_llm).
+    llm = get_fast_llm(temperature=0.2)
     user = state.get("user", {})
     role = user.get("role", "learner")
     class_level = state.get("class_level", user.get("standard", "General"))
@@ -50,9 +53,9 @@ Your response MUST be ONLY a valid JSON object with this schema:
 
 CURRICULUM:
 {ctx_str if ctx_str else "N/A"}
-"""
+{summary_preamble(state.get("session_summary"))}"""
 
-    messages = [SystemMessage(content=system_prompt)] + state.get("messages", [])
+    messages = [SystemMessage(content=system_prompt)] + trim_history(state.get("messages", []))
     response = await llm.ainvoke(messages)
     
     quiz_data = {}

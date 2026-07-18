@@ -2,6 +2,7 @@ from agent.state import AppState
 from agent.llm import get_llm
 from langchain_core.messages import SystemMessage
 from langfuse import observe
+import asyncio
 import uuid
 import json
 
@@ -90,15 +91,7 @@ Generate a structured presentation as slides. Wrap your entire output in:
 [Key takeaways]
 </artifact>"""
 
-    slides_response = await llm.ainvoke([SystemMessage(content=slides_prompt)])
-    slides_id = str(uuid.uuid4())
-    artifacts.append({
-        "id": slides_id,
-        "type": "slides",
-        "content": slides_response.text,
-    })
-
-    # ── 2. Generate Script (WEAK → AVERAGE → STRONG) ───────────────────────
+    # ── 2. Script prompt (built up front so both calls can run concurrently) ─
     script_prompt = f"""You are LearnForge, generating a teaching script for a faculty member.
 
 Topic: {prompt}
@@ -135,7 +128,21 @@ Generate a TEACHING SCRIPT with EXACTLY three sections, in this order:
 [Script for advanced students — deeper theory, nuance, open questions]
 </artifact>"""
 
-    script_response = await llm.ainvoke([SystemMessage(content=script_prompt)])
+    # ── Run both generations concurrently — they're independent, and this was
+    # previously the flagship feature's main latency cost (two sequential
+    # long-form LLM calls back to back). ──────────────────────────────────
+    slides_response, script_response = await asyncio.gather(
+        llm.ainvoke([SystemMessage(content=slides_prompt)]),
+        llm.ainvoke([SystemMessage(content=script_prompt)]),
+    )
+
+    slides_id = str(uuid.uuid4())
+    artifacts.append({
+        "id": slides_id,
+        "type": "slides",
+        "content": slides_response.text,
+    })
+
     script_id = str(uuid.uuid4())
     artifacts.append({
         "id": script_id,
