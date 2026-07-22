@@ -41,7 +41,7 @@ function LoginForm() {
       setErrorMsg(result.error);
       setLoading(false);
     } else {
-      window.location.href = role === 'learner' ? '/learn/chat' : `/${role}/chat`;
+      window.location.href = role === 'learner' ? '/learn' : '/faculty';
     }
   };
 
@@ -61,7 +61,7 @@ function LoginForm() {
       setErrorMsg(result.error);
       setLoading(false);
     } else {
-      window.location.href = role === 'learner' ? '/learn/chat' : `/${role}/chat`;
+      window.location.href = role === 'learner' ? '/learn' : '/faculty';
     }
   };
 

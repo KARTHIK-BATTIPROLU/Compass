@@ -115,11 +115,19 @@ app = FastAPI(title="LearnForge API", lifespan=lifespan)
 # ── CORS ─────────────────────────────────────────────────────────────────────
 WEB_ORIGIN = os.getenv("WEB_ORIGIN", "http://localhost:3000")
 ADDITIONAL_ORIGINS = os.getenv("ADDITIONAL_ORIGINS", "").split(",")
-allowed_origins = [WEB_ORIGIN] + [o.strip() for o in ADDITIONAL_ORIGINS if o.strip()]
+allowed_origins = [
+    WEB_ORIGIN,
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "http://localhost:3002",
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:3001",
+    "http://127.0.0.1:3002",
+] + [o.strip() for o in ADDITIONAL_ORIGINS if o.strip()]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allowed_origins,
+    allow_origins=list(set(allowed_origins)),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

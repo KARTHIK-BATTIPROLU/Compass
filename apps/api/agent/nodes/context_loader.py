@@ -51,8 +51,23 @@ def get_vector_store():
         logger.info("Qdrant connected successfully.")
         return _vector_store
     except Exception as e:
-        logger.warning(f"Qdrant unavailable — curriculum RAG disabled: {e}")
-        return None
+        logger.warning(f"Qdrant URL unavailable, falling back to local storage: {e}")
+        try:
+            client = QdrantClient(path=".qdrant_data")
+            # Quick connectivity check
+            client.get_collections()
+
+            embeddings = GoogleGenerativeAIEmbeddings(model="models/text-embedding-004")
+            _vector_store = QdrantVectorStore(
+                client=client,
+                collection_name="curriculum_chunks",
+                embedding=embeddings,
+            )
+            logger.info("Local Qdrant connected successfully.")
+            return _vector_store
+        except Exception as inner_e:
+            logger.warning(f"Local Qdrant unavailable — curriculum RAG disabled: {inner_e}")
+            return None
 
 
 @observe()

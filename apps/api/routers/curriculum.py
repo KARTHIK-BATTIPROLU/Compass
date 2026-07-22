@@ -64,7 +64,18 @@ def get_qdrant():
                 )
             _qdrant = client
         except Exception as e:
-            logger.warning(f"Qdrant unavailable: {e}")
+            logger.warning(f"Qdrant URL unavailable, falling back to local storage: {e}")
+            try:
+                client = QdrantClient(path=".qdrant_data")
+                existing = {c.name for c in client.get_collections().collections}
+                if "curriculum_chunks" not in existing:
+                    client.create_collection(
+                        collection_name="curriculum_chunks",
+                        vectors_config=VectorParams(size=768, distance=Distance.COSINE),
+                    )
+                _qdrant = client
+            except Exception as inner_e:
+                logger.error(f"Local Qdrant also failed: {inner_e}")
     return _qdrant
 
 
