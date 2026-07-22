@@ -28,12 +28,17 @@ function LoginForm() {
     e.preventDefault();
     setLoading(true);
     setErrorMsg("");
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    if (error) {
-      setErrorMsg(error.message);
+    
+    const formData = new FormData();
+    formData.append('email', email);
+    formData.append('password', password);
+    formData.append('role', role);
+
+    const { login } = await import('./actions');
+    const result = await login(formData);
+    
+    if (result.error) {
+      setErrorMsg(result.error);
       setLoading(false);
     } else {
       window.location.href = role === 'learner' ? '/learn/chat' : `/${role}/chat`;
@@ -43,16 +48,20 @@ function LoginForm() {
   const handleEmailSignup = async () => {
     setLoading(true);
     setErrorMsg("");
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-    });
-    if (error) {
-      setErrorMsg(error.message);
+    
+    const formData = new FormData();
+    formData.append('email', email);
+    formData.append('password', password);
+    formData.append('role', role);
+
+    const { signup } = await import('./actions');
+    const result = await signup(formData);
+    
+    if (result.error) {
+      setErrorMsg(result.error);
       setLoading(false);
     } else {
-      setErrorMsg("Signup successful! Please check your email to verify (or just log in if email confirmation is disabled).");
-      setLoading(false);
+      window.location.href = role === 'learner' ? '/learn/chat' : `/${role}/chat`;
     }
   };
 
