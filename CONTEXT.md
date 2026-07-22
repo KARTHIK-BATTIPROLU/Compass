@@ -393,7 +393,8 @@ class AppState(TypedDict):
 |---|---|---|
 | Agent orchestration | **LangGraph (Python)** | You already build in it; best-in-class for stateful branching workflows, human-in-loop, durable state. |
 | Backend API | **FastAPI** + SSE streaming | Async, streams intermediate workflow output to UI. |
-| LLM | **Gemini free tier** (primary) + **Groq free tier** (fast/cheap topic-extraction & routing) | Zero cost for hackathon; two providers = fallback. |
+| LLM | **ProviderChain (Gemini + Groq)** | Multi-provider fallback chain (Gemini primary, Groq fallback) ensures zero downtime; automatically routes simple extraction/routing jobs to Groq and complex generations to Gemini. |
+| Artifact parsing | **Unified Artifact Parser (`extract_artifact`)** | Robustly extracts `<artifact>` XML blocks regardless of provider nuances (e.g. Groq occasionally outputting json without tags), with graceful degradation and UI fallback flags. |
 | Embeddings | `BAAI/bge-small` local **or** Gemini embeddings free tier | Free either way. |
 | Vector DB | **Qdrant** (free cloud 1GB / Docker self-host); Chroma for local dev | Free, LangChain-native. |
 | Graph memory | **PostgreSQL** (Supabase free tier) — `topics`, `topic_edges`, `user_topic_events`; recursive CTEs | Avoids running Neo4j; upgrade path: Neo4j Aura free. |

@@ -577,3 +577,32 @@ Nodes: ['__start__', 'context_loader', 'router', 'detailed_wf', 'curriculum_wf',
 | `seed_demo.py` populates DB without error | ✅ DONE | Refactored to `.upsert()` |
 | README accurately reflects current tech stack | ✅ DONE | `README.md` rewritten |
 | Auth dependency built for API | ✅ DONE | `agent/auth.py` created |
+
+---
+
+## Final Deployment Sprint — Multi-Provider Fallback & Unified Parser
+
+**Date:** 2026-07-22
+
+### Evidence
+
+#### 1. Resilient LLM Supply (`ProviderChain`)
+- Replaced the hardcoded single-LLM `_execute_with_retry` and fallback chain with `ProviderChain` in `agent/llm.py`.
+- Correctly isolates Gemini vs Groq, ensuring complete failure over to Groq when Gemini exhausts quota.
+- Seamless integration with the existing `get_primary_llm` and `get_fast_llm` structure.
+
+#### 2. Provider-Proof Artifact Production
+- Created `agent/artifact_parser.py` exposing `extract_artifact(text, expected_type, is_json_only=False)`.
+- Handles models (like Groq) that occasionally output raw JSON without enclosing XML `<artifact>` tags.
+- Flags gracefully degraded outputs via the `degraded: True` field in the payload, allowing the UI to render fallback states.
+- Re-wired `worksheet_wf`, `research_wf`, `detailed_wf`, `diagrams_wf`, `was_wf`, and `flashcards_wf` to use the unified parser instead of naive string matching, protecting them from structural failure.
+
+#### 3. RLS and Database Security
+- Updated `agent/nodes/quiz_wf.py` and `agent/nodes/context_loader.py` to instantiate `get_supabase(jwt)` using the user's Auth token instead of the service-role key.
+- Fixed the Qdrant filter in `context_loader.py` to query using `user_id`, enforcing isolation for curriculum vector retrieval.
+
+#### 4. Deployment Readiness
+- Migrated the checkpointer in `main.py` to `AsyncPostgresSaver` backed by a psycopg pool if `DATABASE_URL` is set, preserving sqlite fallback for local dev.
+- Added `QDRANT_API_KEY` passing to all QdrantClient instantiations across `routers/health.py`, `routers/curriculum.py`, `agent/memory_retrieval.py`, and `agent/nodes/context_loader.py`.
+- Re-wrote `demo_script.md` to perfectly match the dual-pane UI, WAS features, and live production endpoints.
+- Seeded production data (SQL).
