@@ -11,7 +11,9 @@ if not os.getenv("GEMINI_API_KEY"):
 
 embeddings = GoogleGenerativeAIEmbeddings(model="models/text-embedding-004")
 
-client = QdrantClient(url="http://localhost:6333")
+url = os.getenv("QDRANT_URL", "http://localhost:6333")
+api_key = os.getenv("QDRANT_API_KEY")
+client = QdrantClient(url=url, api_key=api_key)
 collection_name = "curriculum"
 
 dummy_data = [

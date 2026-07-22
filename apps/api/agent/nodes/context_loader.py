@@ -37,7 +37,8 @@ def get_vector_store():
         from langchain_google_genai import GoogleGenerativeAIEmbeddings
 
         qdrant_url = os.getenv("QDRANT_URL", "http://localhost:6333")
-        client = QdrantClient(url=qdrant_url, timeout=3)
+        qdrant_api_key = os.getenv("QDRANT_API_KEY")
+        client = QdrantClient(url=qdrant_url, api_key=qdrant_api_key, timeout=3)
         # Quick connectivity check
         client.get_collections()
 

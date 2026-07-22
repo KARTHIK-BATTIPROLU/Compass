@@ -52,7 +52,8 @@ def get_qdrant():
             from qdrant_client import QdrantClient
             from qdrant_client.models import VectorParams, Distance
             url = os.getenv("QDRANT_URL", "http://localhost:6333")
-            client = QdrantClient(url=url, timeout=3)
+            api_key = os.getenv("QDRANT_API_KEY")
+            client = QdrantClient(url=url, api_key=api_key, timeout=3)
             
             # Ensure curriculum_chunks collection exists
             existing = {c.name for c in client.get_collections().collections}

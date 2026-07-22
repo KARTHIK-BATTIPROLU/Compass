@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 
 _checkpointer = None
-
+_pg_pool = None
 
 def _prune_old_checkpoints(db_path: str, max_age_days: int = 14) -> None:
     """Delete checkpoint/write rows older than max_age_days. Best-effort —
@@ -66,12 +66,39 @@ def _prune_old_checkpoints(db_path: str, max_age_days: int = 14) -> None:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global _checkpointer
-    _prune_old_checkpoints(CHECKPOINTS_DB)
-    async with AsyncSqliteSaver.from_conn_string(CHECKPOINTS_DB) as saver:
+    global _checkpointer, _pg_pool
+    db_url = os.getenv("DATABASE_URL")
+    
+    if db_url:
+        from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+        from psycopg_pool import AsyncConnectionPool
+        
+        _pg_pool = AsyncConnectionPool(
+            conninfo=db_url,
+            max_size=20,
+            kwargs={
+                "autocommit": True,
+                "prepare_threshold": 0,
+            }
+        )
+        await _pg_pool.open()
+        
+        saver = AsyncPostgresSaver(_pg_pool)
+        await saver.setup()
         _checkpointer = saver
-        yield
-    _checkpointer = None
+        
+        try:
+            yield
+        finally:
+            _checkpointer = None
+            await _pg_pool.close()
+            _pg_pool = None
+    else:
+        _prune_old_checkpoints(CHECKPOINTS_DB)
+        async with AsyncSqliteSaver.from_conn_string(CHECKPOINTS_DB) as saver:
+            _checkpointer = saver
+            yield
+        _checkpointer = None
 
 def get_graph():
     """Returns a graph compiled with the active checkpointer."""

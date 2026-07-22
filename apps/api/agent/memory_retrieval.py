@@ -49,7 +49,8 @@ def get_qdrant():
         try:
             from qdrant_client import QdrantClient
             url = os.getenv("QDRANT_URL", "http://localhost:6333")
-            _qdrant = QdrantClient(url=url, timeout=3)
+            api_key = os.getenv("QDRANT_API_KEY")
+            _qdrant = QdrantClient(url=url, api_key=api_key, timeout=3)
             _qdrant.get_collections()  # connectivity check
         except Exception as e:
             logger.warning(f"Qdrant unavailable in memory_retrieval: {e}")
