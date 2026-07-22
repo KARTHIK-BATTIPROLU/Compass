@@ -1,6 +1,7 @@
 from agent.state import AppState
 from agent.llm import get_llm
 from agent.prompt_utils import trim_history
+from agent.artifact_parser import extract_artifact, generate_fallback_notice
 from langchain_core.messages import SystemMessage, HumanMessage
 from langfuse import observe
 import uuid
@@ -38,9 +39,8 @@ async def diagrams_wf_node(state: AppState):
     content_blocks = [
         {"type": "text", "text": f"""You are LearnForge. I have retrieved the following educational diagrams for the topic: '{prompt}'.
 For each image, provide a 2-sentence "easy, simple, accurate" explanation of what it shows.
-Return EXACTLY a JSON string inside `<artifact type="diagram_gallery">...</artifact>` tags.
+Return EXACTLY a raw JSON string. Do not use wrapper tags.
 Schema:
-<artifact type="diagram_gallery">
 {{
   "images": [
     {{
@@ -51,7 +51,6 @@ Schema:
     }}
   ]
 }}
-</artifact>
 
 IMAGES TO ANALYZE:
 """}
@@ -70,15 +69,25 @@ IMAGES TO ANALYZE:
     response = await llm.ainvoke(messages)
     
     artifacts = state.get("artifacts", [])
-    if "<artifact type=\"diagram_gallery\">" in response.text:
+    response_text = response.text
+    
+    wrapped_content, tag_present, degraded = extract_artifact(
+        response_text, "diagram_gallery", is_json_only=True, workflow_name="diagrams_wf"
+    )
+    
+    if wrapped_content and not degraded:
+        response.content = wrapped_content
         artifacts.append({
             "id": str(uuid.uuid4()),
             "type": "diagram_gallery",
-            "content": response.text,
+            "content": wrapped_content,
             "created_at": "now"
         })
+    else:
+        response.content = response_text + generate_fallback_notice()
         
     return {
         "messages": [response],
         "artifacts": artifacts
     }
+

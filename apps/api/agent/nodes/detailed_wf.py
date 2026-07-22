@@ -1,8 +1,13 @@
 from agent.state import AppState
 from agent.llm import get_llm
 from agent.prompt_utils import trim_history, summary_preamble
+from agent.artifact_parser import extract_artifact, generate_fallback_notice
 from langchain_core.messages import SystemMessage
 from langfuse import observe
+import uuid
+import logging
+
+logger = logging.getLogger(__name__)
 
 @observe()
 async def detailed_wf_node(state: AppState):
@@ -33,9 +38,33 @@ async def detailed_wf_node(state: AppState):
 
     system_prompt = f"""You are LearnForge, an advanced AI learning assistant.
 The user is a {role}. Class level: {class_level if class_level else 'not specified'}.
-Provide a highly detailed, step-by-step, well-structured explanation. Use markdown headers, bullet points, and examples.{weakness_section}{curriculum_section}{summary_preamble(state.get("session_summary"))}"""
+Provide a highly detailed, step-by-step, well-structured explanation. Use markdown headers, bullet points, and examples.{weakness_section}{curriculum_section}
+Enclose your explanation in `<artifact type="detailed_explanation">` and `</artifact>`.
+{summary_preamble(state.get("session_summary"))}"""
 
     messages = [SystemMessage(content=system_prompt)] + trim_history(state.get("messages", []))
     response = await llm.ainvoke(messages)
+    
+    artifacts = state.get("artifacts", [])
+    response_text = response.text
+    
+    wrapped_content, tag_present, degraded = extract_artifact(
+        response_text, "detailed_explanation", is_json_only=False, workflow_name="detailed_wf"
+    )
+    
+    if degraded:
+        wrapped_content += generate_fallback_notice()
+        
+    response.content = wrapped_content
+    artifacts.append({
+        "id": str(uuid.uuid4()),
+        "type": "detailed_explanation",
+        "content": wrapped_content,
+        "created_at": "now"
+    })
 
-    return {"messages": [response]}
+    return {
+        "messages": [response],
+        "artifacts": artifacts
+    }
+

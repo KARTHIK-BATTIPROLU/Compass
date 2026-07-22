@@ -1,6 +1,7 @@
 from agent.state import AppState
 from agent.llm import get_fast_llm
 from agent.prompt_utils import trim_history, summary_preamble
+from agent.artifact_parser import extract_json_payload, generate_fallback_notice
 from langchain_core.messages import SystemMessage
 from langfuse import observe
 import os
@@ -23,8 +24,6 @@ def get_supabase():
 
 @observe()
 async def quiz_wf_node(state: AppState):
-    # Fast/cheap tier (Groq-primary): quiz output is plain JSON, not the
-    # custom <artifact> tag format Groq is unreliable at (see get_fast_llm).
     llm = get_fast_llm(temperature=0.2)
     user = state.get("user", {})
     role = user.get("role", "learner")
@@ -58,31 +57,26 @@ CURRICULUM:
     messages = [SystemMessage(content=system_prompt)] + trim_history(state.get("messages", []))
     response = await llm.ainvoke(messages)
     
-    quiz_data = {}
-    try:
-        raw = response.text
-        if "```json" in raw:
-            raw = raw.split("```json")[1].split("```")[0]
-        elif "```" in raw:
-            raw = raw.split("```")[1].split("```")[0]
-        quiz_data = json.loads(raw.strip())
-    except Exception as e:
-        print("Failed to parse quiz JSON:", e)
-        quiz_data = {"title": "Error generating quiz", "questions": []}
-
+    quiz_data = extract_json_payload(response.text)
     artifacts = state.get("artifacts", [])
+    
+    if not quiz_data:
+        logger.warning(f"[quiz_wf] Failed to extract JSON. Degrading.")
+        response.content = response.text + generate_fallback_notice()
+        return {
+            "messages": [response],
+            "artifacts": artifacts
+        }
+
     art_id = str(uuid.uuid4())
     session_id = state.get("session_id")
 
     if role == "faculty":
         token = str(uuid.uuid4())
-        artifact_content = f'<artifact type="quiz_link" token="{token}">{json.dumps(quiz_data)}</artifact>'
+        artifact_content = f'<artifact type="quiz_link" token="{token}">\n{json.dumps(quiz_data)}\n</artifact>'
         try:
             sb = get_supabase()
             if sb:
-                # quizzes.artifact_id is a real FK to artifacts.id. composer_node
-                # persists artifacts too, but only after this node returns, so we
-                # create the row here first or the insert below violates the FK.
                 sb.table("artifacts").upsert({
                     "id": art_id,
                     "session_id": session_id,
@@ -96,9 +90,9 @@ CURRICULUM:
                     "open": True
                 }).execute()
         except Exception as e:
-            print("Failed to save quiz:", e)
+            logger.warning(f"Failed to save quiz: {e}")
     else:
-        artifact_content = f'<artifact type="learner_quiz">{json.dumps(quiz_data)}</artifact>'
+        artifact_content = f'<artifact type="learner_quiz">\n{json.dumps(quiz_data)}\n</artifact>'
 
     artifacts.append({
         "id": art_id,

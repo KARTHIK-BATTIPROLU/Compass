@@ -1,6 +1,7 @@
 from agent.state import AppState
 from agent.llm import get_llm
 from agent.prompt_utils import trim_history, summary_preamble
+from agent.artifact_parser import extract_artifact, generate_fallback_notice
 from langchain_core.messages import SystemMessage
 from langfuse import observe
 import uuid
@@ -58,9 +59,8 @@ async def flashcards_wf_node(state: AppState):
     class_level = state.get("class_level", "General")
     
     system_prompt = f"""You are LearnForge. Generate a set of 5 flashcards for {class_level} level based on the topic.
-Format your output EXACTLY as a JSON string inside `<artifact type="flashcards">...</artifact>`.
+Format your output EXACTLY as a raw JSON string. Do not use wrapper tags.
 Schema:
-<artifact type="flashcards">
 {{
   "title": "Topic Name",
   "cards": [
@@ -70,7 +70,6 @@ Schema:
     }}
   ]
 }}
-</artifact>
 {summary_preamble(state.get("session_summary"))}"""
 
     messages = [SystemMessage(content=system_prompt)] + trim_history(state.get("messages", []))
@@ -78,9 +77,14 @@ Schema:
     
     artifacts = state.get("artifacts", [])
     response_text = response.text
-    if "<artifact type=\"flashcards\">" in response_text:
-        # Extract the JSON to build the APKG
-        raw = response_text.split('<artifact type="flashcards">')[1].split('</artifact>')[0]
+    
+    wrapped_content, tag_present, degraded = extract_artifact(
+        response_text, "flashcards", is_json_only=True, workflow_name="flashcards_wf"
+    )
+    
+    if wrapped_content and not degraded:
+        # Extract the inner JSON back out from our helper's wrapped format to build APKG
+        raw = wrapped_content.split('<artifact type="flashcards">')[1].split('</artifact>')[0]
         try:
             data = json.loads(raw)
             filename = create_apkg(data.get("title", "LearnForge Deck"), data.get("cards", []))
@@ -90,19 +94,22 @@ Schema:
 
             new_content = f'<artifact type="flashcards">\n{json.dumps(data)}\n</artifact>'
             response.content = new_content
+            
+            artifacts.append({
+                "id": str(uuid.uuid4()),
+                "type": "flashcards",
+                "content": new_content,
+                "created_at": "now"
+            })
         except Exception as e:
             logger.warning(f"Failed to generate Anki deck: {e}")
-            new_content = response_text
-            response.content = new_content
-
-        artifacts.append({
-            "id": str(uuid.uuid4()),
-            "type": "flashcards",
-            "content": new_content,
-            "created_at": "now"
-        })
+            response.content = response_text + generate_fallback_notice()
+    else:
+        # Failed to extract JSON entirely
+        response.content = response_text + generate_fallback_notice()
         
     return {
         "messages": [response],
         "artifacts": artifacts
     }
+

@@ -1,10 +1,14 @@
 from agent.state import AppState
 from agent.llm import get_llm
-from langchain_core.messages import SystemMessage
+from agent.artifact_parser import extract_artifact, generate_fallback_notice
+from langchain_core.messages import SystemMessage, AIMessage
 from langfuse import observe
 import asyncio
 import uuid
 import json
+import logging
+
+logger = logging.getLogger(__name__)
 
 @observe()
 async def was_wf_node(state: AppState):
@@ -43,7 +47,6 @@ async def was_wf_node(state: AppState):
             "The W-A-S script is grounded in your Lecture Flow and curriculum, "
             "ensuring each section targets the right learner level."
         )
-        from langchain_core.messages import AIMessage
         return {
             "messages": [AIMessage(content=guidance)],
             "artifacts": artifacts,
@@ -136,24 +139,36 @@ Generate a TEACHING SCRIPT with EXACTLY three sections, in this order:
         llm.ainvoke([SystemMessage(content=script_prompt)]),
     )
 
+    slides_content, _, slides_degraded = extract_artifact(
+        slides_response.text, "slides", is_json_only=False, workflow_name="was_wf"
+    )
+    if slides_degraded:
+        slides_content += generate_fallback_notice()
+        
+    script_content, _, script_degraded = extract_artifact(
+        script_response.text, "script", is_json_only=False, workflow_name="was_wf"
+    )
+    if script_degraded:
+        script_content += generate_fallback_notice()
+
     slides_id = str(uuid.uuid4())
     artifacts.append({
         "id": slides_id,
         "type": "slides",
-        "content": slides_response.text,
+        "content": slides_content,
     })
 
     script_id = str(uuid.uuid4())
     artifacts.append({
         "id": script_id,
         "type": "script",
-        "content": script_response.text,
+        "content": script_content,
     })
 
     # Combine both responses for the message stream
-    combined = slides_response.text + "\n\n---\n\n" + script_response.text
-    from langchain_core.messages import AIMessage
+    combined = slides_content + "\n\n---\n\n" + script_content
     return {
         "messages": [AIMessage(content=combined)],
         "artifacts": artifacts,
     }
+
