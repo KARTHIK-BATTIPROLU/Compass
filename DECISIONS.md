@@ -3,6 +3,15 @@
 
 ---
 
+## 2026-07-22 — Part 1: LLM Supply Fix
+
+### DEC-028: Reintroduced Groq as a fallback provider (reversing DEC-005)
+- **Issue:** As identified in DEC-021, the Gemini free tier has a single shared pool (20 req/day) across all keys configured in this project. The previous 3-key fallback did not protect against quota exhaustion.
+- **Decision:** Reintroduced `ChatGroq` as a secondary fallback in `agent/llm.py`'s `ProviderChain`. This deliberately reverses the "migrated off Groq" decision mentioned in prior sprint audits, because having an independent vendor with an independent quota is the only way to genuinely survive primary quota exhaustion. Added `GROQ_API_KEY` requirement to `.env` and `README.md`.
+- **Impact:** The app can now gracefully fail over to `llama-3.3-70b-versatile` on Groq when Google's rate limits hit, unblocking demo runs.
+
+---
+
 ## 2026-07-18 — Final Sprint, Part D
 
 ### DEC-026: Groq fast-tier deliberately excludes any node that needs the `<artifact>` tag format

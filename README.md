@@ -25,7 +25,7 @@ At the end of every turn, the `memory_writer` node extracts topics, upserts them
 - Node.js 18+ and `npm`
 - Docker (for Qdrant vector database)
 - A Supabase project (for Postgres Auth + DB)
-- API Keys: Google Gemini (`GEMINI_API_KEY`), Tavily (`TAVILY_API_KEY`)
+- API Keys: Google Gemini (`GEMINI_API_KEY`), Groq (`GROQ_API_KEY`), Tavily (`TAVILY_API_KEY`)
 
 ### 1. Backend (FastAPI + LangGraph)
 ```bash
