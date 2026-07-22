@@ -28,6 +28,7 @@ class AppState(TypedDict):
     citations: List[Dict[str, Any]]
     nudge: Optional[Dict[str, Any]]
     session_summary: Optional[str]
+    jwt: Optional[str]
 
     messages: Annotated[list, add_messages]
     route: str

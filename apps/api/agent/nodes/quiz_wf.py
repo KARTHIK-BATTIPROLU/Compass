@@ -11,16 +11,20 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-_supabase = None
-def get_supabase():
-    global _supabase
-    if _supabase is None:
-        from supabase import create_client
-        url = os.getenv("SUPABASE_URL", "")
-        key = os.getenv("SUPABASE_SERVICE_KEY", os.getenv("SUPABASE_ANON_KEY", ""))
-        if url and key:
-            _supabase = create_client(url, key)
-    return _supabase
+def get_supabase(jwt: str = None):
+    from supabase import create_client, ClientOptions
+    url = os.getenv("SUPABASE_URL", "")
+    key = os.getenv("SUPABASE_ANON_KEY", "")
+    
+    if not url or not key:
+        return None
+        
+    options = None
+    if jwt:
+        options = ClientOptions(headers={"Authorization": f"Bearer {jwt}"})
+        
+    return create_client(url, key, options=options)
+
 
 @observe()
 async def quiz_wf_node(state: AppState):
@@ -75,7 +79,7 @@ CURRICULUM:
         token = str(uuid.uuid4())
         artifact_content = f'<artifact type="quiz_link" token="{token}">\n{json.dumps(quiz_data)}\n</artifact>'
         try:
-            sb = get_supabase()
+            sb = get_supabase(jwt=state.get("jwt"))
             if sb:
                 sb.table("artifacts").upsert({
                     "id": art_id,

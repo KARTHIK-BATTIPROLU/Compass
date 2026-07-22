@@ -163,6 +163,11 @@ async def chat_stream(req: Request, chat_req: ChatRequest, user = Depends(get_cu
         return StreamingResponse(_err(), media_type="text/event-stream")
 
     async def event_generator():
+        auth_header = req.headers.get("Authorization", "")
+        token = ""
+        if auth_header.startswith("Bearer "):
+            token = auth_header[len("Bearer "):]
+
         inputs = {
             "session_id": chat_req.session_id,
             "prompt": chat_req.prompt,
@@ -172,6 +177,7 @@ async def chat_stream(req: Request, chat_req: ChatRequest, user = Depends(get_cu
             "artifacts": [],
             "topics_touched": [],
             "citations": [],
+            "jwt": token,
         }
 
         # thread_id = session_id so each session has its own durable state

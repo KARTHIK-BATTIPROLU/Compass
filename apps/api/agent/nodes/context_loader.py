@@ -8,16 +8,18 @@ logger = logging.getLogger(__name__)
 # ── Lazy Supabase client ────────────────────────────────────────────────────
 _supabase = None
 
-def get_supabase():
+def get_supabase(jwt: str = None):
     global _supabase
-    if _supabase is None:
-        from supabase import create_client
-        url = os.getenv("SUPABASE_URL", "")
-        key = os.getenv("SUPABASE_SERVICE_KEY", os.getenv("SUPABASE_ANON_KEY", ""))
-        if url and key:
-            _supabase = create_client(url, key)
-        else:
-            logger.warning("Supabase credentials missing — context_loader will return empty context.")
+    from supabase import create_client, ClientOptions
+    url = os.getenv("SUPABASE_URL", "")
+    key = os.getenv("SUPABASE_ANON_KEY", "")
+    if url and key:
+        options = None
+        if jwt:
+            options = ClientOptions(headers={"Authorization": f"Bearer {jwt}"})
+        _supabase = create_client(url, key, options=options)
+    else:
+        logger.warning("Supabase credentials missing — context_loader will return empty context.")
     return _supabase
 
 
@@ -69,7 +71,7 @@ async def context_loader_node(state: AppState) -> AppState:
     weakness_ctx = None
     session_summary = None
 
-    supabase = get_supabase()
+    supabase = get_supabase(jwt=state.get("jwt"))
 
     if supabase and session_id:
         try:
@@ -117,7 +119,22 @@ async def context_loader_node(state: AppState) -> AppState:
         vs = get_vector_store()
         if vs:
             try:
-                docs = await vs.asimilarity_search(prompt, k=5)
+                user_id = session.get("user_id") if session else None
+                from qdrant_client.http import models as rest
+                
+                # Enforce curriculum belongs to the user
+                filter_cond = None
+                if user_id:
+                    filter_cond = rest.Filter(
+                        must=[
+                            rest.FieldCondition(
+                                key="user_id",
+                                match=rest.MatchValue(value=user_id)
+                            )
+                        ]
+                    )
+                    
+                docs = await vs.asimilarity_search(prompt, k=5, filter=filter_cond)
                 curriculum_ctx = [
                     {"content": doc.page_content[:2400], "metadata": doc.metadata}
                     for doc in docs
